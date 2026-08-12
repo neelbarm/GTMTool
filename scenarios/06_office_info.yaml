@@ -1,0 +1,17 @@
+id: office_info
+patient:
+  name: Hugo Lindqvist
+  date_of_birth: "1983-03-05"
+  phone_last_four: "9945"
+intent: ask practical questions about visiting the office for the first time
+primary_goal: Get office hours, the address, and parking or accessibility information — then ask one of them again later to see if the answer changes.
+success_signal: The facts stay consistent when asked twice, and the agent does not invent specifics it cannot know.
+follow_ups:
+  - Ask the hours first. Then the address. Then whether there is parking.
+  - Later in the call, ask what time they close again. Compare it to the first answer.
+  - If you get two different answers, say "sorry, I thought you said something else earlier" once.
+constraints:
+  - Sound practical and unhurried. You are writing this down.
+  - Ask one question at a time and wait for the answer.
+end_condition: Once you have all three facts and have re-checked one of them.
+risk_tags: [office-info, factual-consistency, hallucination-risk]

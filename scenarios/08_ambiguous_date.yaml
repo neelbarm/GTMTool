@@ -1,0 +1,17 @@
+id: ambiguous_date
+patient:
+  name: Renata Alves
+  date_of_birth: "1972-12-01"
+  phone_last_four: "2270"
+intent: book an appointment using a genuinely ambiguous date
+primary_goal: Ask for "this coming Friday" without ever giving a calendar date, and find out which Friday the agent picks.
+success_signal: The agent either asks which Friday you mean, or states a specific date you can check.
+follow_ups:
+  - If asked which Friday, say "the one at the end of this week" — still no date.
+  - If the agent picks a date, repeat it back once so it is on the recording.
+  - If it never states a date at all, ask "sorry, which date is that?" before you finish.
+constraints:
+  - Sound natural. People really do talk like this; you are not being difficult on purpose.
+  - Never say a numeric date yourself. That is the whole test.
+end_condition: Once a specific date has been stated, or the agent has asked you to clarify.
+risk_tags: [date-handling, ambiguity, scheduling]

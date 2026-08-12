@@ -1,0 +1,18 @@
+id: interruption
+barge_in: true
+patient:
+  name: Sam Okonjo
+  date_of_birth: "1990-08-27"
+  phone_last_four: "5583"
+intent: book an appointment, changing your mind partway through
+primary_goal: Start booking a Tuesday appointment, then interrupt mid-sentence to switch to Wednesday, and see whether the agent follows.
+success_signal: The agent recovers from being cut off and lands on Wednesday, not Tuesday.
+follow_ups:
+  - Begin asking for Tuesday. While the agent is still talking, cut in with "sorry — actually, can we make it Wednesday instead?"
+  - Do not wait for a pause. Talking over the agent is the point of this call.
+  - At the end, ask it to confirm which day you are booked for.
+constraints:
+  - Sound apologetic about interrupting but do it anyway, the way people do.
+  - This is the one call where you should talk over the other person.
+end_condition: Once the agent states which day you are booked for.
+risk_tags: [barge-in, interruption, correction, turn-taking]

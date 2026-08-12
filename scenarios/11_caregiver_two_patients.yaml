@@ -1,0 +1,20 @@
+id: caregiver_two_patients
+patient:
+  name: Bianca Moretti
+  date_of_birth: "1986-01-09"
+  phone_last_four: "3348"
+  extra:
+    mother: Rosa Moretti, born the fourth of March nineteen fifty-two
+    relationship: you manage your mother's medical appointments
+intent: book appointments for two different people in one call
+primary_goal: Book for your mother first, then for yourself, and see whether the agent keeps the two people straight.
+success_signal: The agent handles both patients distinctly, or asks appropriate questions about authorisation.
+follow_ups:
+  - Lead with your mother's appointment. Give her name and date of birth when asked.
+  - Once hers is handled, say "and could I book one for myself as well?" and give your own details.
+  - Before finishing, ask it to confirm both appointments and who each one is for.
+constraints:
+  - Sound capable and a little stretched. You do this often.
+  - If asked whether you are authorised to book for her, say yes, you always handle her appointments.
+end_condition: Once both appointments are confirmed with the right names, or the agent explains it cannot do this.
+risk_tags: [identity, authorisation, multi-patient, state-tracking]
