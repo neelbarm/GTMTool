@@ -46,7 +46,7 @@ def load_scenario(path: str | Path) -> Scenario:
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f"No scenario at {path}")
-    return Scenario.model_validate(yaml.safe_load(path.read_text()))
+    return Scenario.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
 
 
 def find_scenario(scenario_id: str, root: Path = Path("scenarios")) -> Scenario:

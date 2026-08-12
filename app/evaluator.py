@@ -123,7 +123,7 @@ Return JSON matching this shape and nothing else:
 
 
 def evaluate_call_dir(settings: Settings, call_dir: Path, scenario: Scenario) -> dict:
-    transcript = (call_dir / "transcript.txt").read_text()
+    transcript = (call_dir / "transcript.txt").read_text(encoding="utf-8")
     result = evaluate(settings, scenario, transcript)
-    (call_dir / "evaluation.json").write_text(json.dumps(result, indent=2))
+    (call_dir / "evaluation.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
     return result

@@ -112,6 +112,10 @@ class Bridge:
         self.marks: list[str] = []
         self.heard_anything = False
 
+        # Call-relative offsets for when each side started its current turn.
+        self.agent_started_at: float | None = None
+        self.patient_started_at: float | None = None
+
     # ---------- lifecycle ----------
 
     async def run(self) -> None:
@@ -191,6 +195,10 @@ class Bridge:
                 elif event == "mark":
                     if self.marks:
                         self.marks.pop(0)
+                    if not self.marks:
+                        # Twilio has played everything we sent. This — not
+                        # response.audio.done — is when our turn is really over.
+                        self._reset_playback()
                 elif event == "stop":
                     self.art.event("stream_stop")
                     self._finish("twilio_stop")
@@ -215,17 +223,28 @@ class Bridge:
                     await self._play(event)
                 elif kind in SPEECH_STARTED:
                     self.heard_anything = True
+                    if self.agent_started_at is None:
+                        self.agent_started_at = self.art.offset
                     await self._handle_barge_in()
                 elif kind in PATIENT_TRANSCRIPT:
-                    self.art.turn("PATIENT", event.get("transcript", ""))
+                    # Timestamp when this turn was *spoken*, not when its
+                    # transcript arrived — see _spoken_at.
+                    self.art.turn(
+                        "PATIENT", event.get("transcript", ""), self._take_patient_start()
+                    )
                 elif kind in AGENT_TRANSCRIPT:
                     self.heard_anything = True
-                    self.art.turn("AGENT", event.get("transcript", ""))
+                    self.art.turn(
+                        "AGENT", event.get("transcript", ""), self._take_agent_start()
+                    )
                 elif kind == "response.function_call_arguments.done":
                     await self._handle_tool_call(event)
                 elif kind in AUDIO_DONE:
-                    self.response_start_ms = None
-                    self.current_item_id = None
+                    # Generation finished, but Twilio is still playing what we
+                    # already sent. Playback state is reset when the mark queue
+                    # drains, not here — resetting here would disarm the
+                    # barge-in guard while the caller can still hear us.
+                    pass
                 elif kind == "session.updated":
                     # Echoes the audio format the server actually accepted.
                     self.art.event(
@@ -251,6 +270,8 @@ class Bridge:
         if self.response_start_ms is None:
             self.response_start_ms = self.latest_media_ms
             self.current_item_id = event.get("item_id")
+            if self.patient_started_at is None:
+                self.patient_started_at = self.art.offset
 
         await self.twilio.send_text(
             json.dumps(
@@ -276,14 +297,24 @@ class Bridge:
         )
 
     async def _handle_barge_in(self) -> None:
-        """The agent started speaking. Stop ours, on both sides."""
+        """The agent started speaking. Stop ours, on both sides.
+
+        The test for "are we still audible" is the mark queue, not whether the
+        model is still generating. The Realtime API produces audio faster than
+        realtime, so generation routinely finishes several seconds before Twilio
+        has played the last of it — gating the `clear` on generation state would
+        skip it during exactly the window where the caller can still hear us.
+        """
         if self.scenario.barge_in:
             return  # this scenario deliberately talks over the agent
-        if not self.marks or self.response_start_ms is None:
-            return
+        if not self.marks:
+            return  # nothing of ours is still queued at Twilio
 
-        spoken_ms = max(0, self.latest_media_ms - self.response_start_ms)
-        if self.current_item_id:
+        # Always flush Twilio's buffer. Truncating the model's memory of the turn
+        # additionally needs to know which item was playing and when it started.
+        spoken_ms: int | None = None
+        if self.current_item_id is not None and self.response_start_ms is not None:
+            spoken_ms = max(0, self.latest_media_ms - self.response_start_ms)
             await self.openai.send(
                 json.dumps(
                     {
@@ -297,11 +328,32 @@ class Bridge:
         await self.twilio.send_text(
             json.dumps({"event": "clear", "streamSid": self.stream_sid})
         )
-        self.art.event("barge_in", truncated_at_ms=spoken_ms)
+        self.art.event(
+            "barge_in", truncated_at_ms=spoken_ms, chunks_dropped=len(self.marks)
+        )
+        self._reset_playback()
 
+    def _reset_playback(self) -> None:
         self.marks.clear()
         self.response_start_ms = None
         self.current_item_id = None
+
+    # ---------- when each side actually spoke ----------
+    #
+    # Transcripts arrive when transcription finishes, which for the agent's side
+    # is an async job that can land after a later patient turn. Timestamping on
+    # arrival and then sorting by that value can invert turn order in
+    # transcript.txt — and that transcript is the evaluator's only input. So each
+    # side's start time is captured when the audio actually began and attached to
+    # the transcript when it shows up.
+
+    def _take_agent_start(self) -> float | None:
+        at, self.agent_started_at = self.agent_started_at, None
+        return at
+
+    def _take_patient_start(self) -> float | None:
+        at, self.patient_started_at = self.patient_started_at, None
+        return at
 
     async def _handle_tool_call(self, event: dict[str, Any]) -> None:
         if event.get("name") != "end_call":
@@ -313,9 +365,22 @@ class Bridge:
         reason = args.get("reason", "other")
         self.art.event("end_call_tool", reason=reason, summary=args.get("summary"))
         log.info("model asked to hang up: %s", reason)
-        # Let the goodbye finish playing out before we cut the line.
-        await asyncio.sleep(1.5)
+        await self._drain_playback()
         self._finish(f"model_ended:{reason}")
+
+    async def _drain_playback(self, timeout: float = 15.0) -> None:
+        """Wait for Twilio to finish playing what we have sent.
+
+        The tool call arrives as soon as the model has *generated* the goodbye,
+        which is well before the caller has heard it. A fixed sleep either cuts
+        the goodbye off or pads every call with dead air, so wait on the mark
+        queue instead and cap it in case a mark goes missing.
+        """
+        waited = 0.0
+        while self.marks and waited < timeout:
+            await asyncio.sleep(0.1)
+            waited += 0.1
+        self.art.event("playback_drained", waited_seconds=round(waited, 1))
 
     # ---------- termination ----------
 
@@ -351,20 +416,26 @@ async def run_bridge(twilio_ws: WebSocket) -> None:
     try:
         await bridge.run()
     finally:
+        # Every step here is independently guarded: a failure writing artifacts
+        # must not skip the hangup, or the leg stays up until its time limit.
         art = bridge.art
         if art is not None:
-            art.write_transcripts()
-            art.write_metadata(
-                scenario_id=bridge.scenario.id if bridge.scenario else None,
-                twilio_call_sid=bridge.call_sid,
-                source_number=bridge.settings.twilio_phone_number,
-                destination=bridge.settings.allowed_destination,
-                realtime_model=bridge.settings.realtime_model,
-                realtime_voice=bridge.settings.realtime_voice,
-                termination_reason=bridge.completion_reason,
-            )
-            art.close()
-            log.info("artifacts written to %s", art.dir)
+            try:
+                art.write_transcripts()
+                art.write_metadata(
+                    scenario_id=bridge.scenario.id if bridge.scenario else None,
+                    twilio_call_sid=bridge.call_sid,
+                    source_number=bridge.settings.twilio_phone_number,
+                    destination=bridge.settings.allowed_destination,
+                    realtime_model=bridge.settings.realtime_model,
+                    realtime_voice=bridge.settings.realtime_voice,
+                    termination_reason=bridge.completion_reason,
+                )
+                log.info("artifacts written to %s", art.dir)
+            except Exception:
+                log.exception("failed writing artifacts for %s", art.dir)
+            finally:
+                art.close()
         _hangup(bridge)
 
 

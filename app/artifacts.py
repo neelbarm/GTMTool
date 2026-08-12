@@ -64,8 +64,8 @@ class CallArtifacts:
         lines = [
             f"[{format_offset(t['at'])}] {t['speaker']}: {t['text']}" for t in ordered
         ]
-        (self.dir / "transcript.txt").write_text("\n".join(lines) + "\n")
-        (self.dir / "transcript.json").write_text(json.dumps(ordered, indent=2))
+        (self.dir / "transcript.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        (self.dir / "transcript.json").write_text(json.dumps(ordered, indent=2), encoding="utf-8")
 
     def write_metadata(self, **fields: Any) -> None:
         ended = datetime.now(timezone.utc)
@@ -77,7 +77,7 @@ class CallArtifacts:
             "git_commit": _git_sha(),
             **fields,
         }
-        (self.dir / "metadata.json").write_text(json.dumps(meta, indent=2))
+        (self.dir / "metadata.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
     def close(self) -> None:
         if not self._events.closed:

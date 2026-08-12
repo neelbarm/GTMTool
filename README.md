@@ -100,6 +100,18 @@ python scripts/build_bug_report.py --evaluate # candidate findings per call
 python scripts/build_bug_report.py --report   # writes docs/bug-report.md
 ```
 
+`--evaluate` skips calls that already have an `evaluation.json`, so running it
+again after adding a couple of calls will not overwrite the `"validated": true`
+flags you set by hand. `--force` re-runs them and carries those flags across.
+
+Run `fetch_recordings.py` before evaluating. The bridge measures time from when
+the call is *answered*, Twilio records from when it is *initiated*, so transcript
+timestamps are shifted onto the recording's clock as part of the download —
+otherwise every timestamp in the bug report would point at the wrong moment in
+the audio by however long the line rang. The shift is recorded as
+`recording_offset_seconds` in `metadata.json`, and the pre-shift values are kept
+as `at_stream` in `transcript.json`.
+
 ## Environment variables
 
 | Variable | Purpose |
@@ -146,3 +158,7 @@ diarisation step to get wrong.
   That is deliberate defensiveness against an API rename, not evidence that both
   versions were tested.
 - One call at a time. Concurrency was not needed and was not built.
+- Turn timestamps mark when each side *started* speaking, since transcription
+  finishes at unpredictable times. They are accurate to about the length of a
+  turn, which is enough to find a moment in a recording but not to measure
+  response latency.

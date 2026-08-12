@@ -15,12 +15,14 @@ import argparse
 import json
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import requests  # noqa: E402
 
+from app.artifacts import format_offset  # noqa: E402
 from app.config import ConfigError, get_settings  # noqa: E402
 from app.telephony import build_client  # noqa: E402
 
@@ -32,6 +34,48 @@ def convert_to_mp3(wav: Path) -> Path:
         check=True,
     )
     return mp3
+
+
+def align_transcripts(out_dir: Path, meta: dict, rec) -> float:
+    """Shift transcript timestamps onto the recording's clock.
+
+    The bridge measures offsets from the moment the Media Stream opens, which is
+    when the call is *answered*. Twilio starts recording when the call is
+    *initiated*, so every transcript timestamp sits later in the audio than its
+    number suggests, by however long the line rang. Since the documented
+    validation step is "listen at the timestamp given", that gap has to be closed
+    or every citation in the bug report points at the wrong moment.
+
+    Returns the shift in seconds.
+    """
+    stream_started = datetime.fromisoformat(meta["started_at"])
+    recording_started = rec.start_time
+    if recording_started is None:
+        return 0.0
+    if recording_started.tzinfo is None:
+        recording_started = recording_started.replace(tzinfo=timezone.utc)
+
+    shift = (stream_started - recording_started).total_seconds()
+    if shift <= 0:
+        return 0.0
+
+    transcript_json = out_dir / "transcript.json"
+    if not transcript_json.exists():
+        return shift
+
+    turns = json.loads(transcript_json.read_text(encoding="utf-8"))
+    for turn in turns:
+        turn["at_stream"] = turn["at"]
+        turn["at"] = round(turn["at"] + shift, 2)
+    transcript_json.write_text(json.dumps(turns, indent=2), encoding="utf-8")
+
+    lines = [
+        f"[{format_offset(t['at'])}] {t['speaker']}: {t['text']}"
+        for t in sorted(turns, key=lambda t: t["at"])
+    ]
+    (out_dir / "transcript.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"  shifted transcript by {shift:.1f}s to match the recording")
+    return shift
 
 
 def fetch_one(settings, call_sid: str, call_id: str) -> bool:
@@ -60,11 +104,13 @@ def fetch_one(settings, call_sid: str, call_id: str) -> bool:
 
     meta_path = out_dir / "metadata.json"
     if meta_path.exists():
-        meta = json.loads(meta_path.read_text())
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
         meta["recording_sid"] = rec.sid
         meta["recording_channels"] = rec.channels
         meta["recording_duration_seconds"] = rec.duration
-        meta_path.write_text(json.dumps(meta, indent=2))
+        shift = align_transcripts(out_dir, meta, rec)
+        meta["recording_offset_seconds"] = shift
+        meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
     return True
 
 
@@ -87,7 +133,7 @@ def main() -> int:
 
     if args.all:
         for meta_path in sorted(settings.artifacts_dir.glob("*/metadata.json")):
-            meta = json.loads(meta_path.read_text())
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
             sid = meta.get("twilio_call_sid")
             if not sid or (meta_path.parent / "recording.mp3").exists():
                 continue

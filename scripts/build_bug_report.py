@@ -42,32 +42,79 @@ still in each call's `evaluation.json`, marked `"validated": false`.
 |----|----------|------|------|----------|----------|----------------|"""
 
 
-def evaluate_all(settings) -> int:
-    count = 0
+def evaluate_all(settings, force: bool = False) -> int:
+    """Evaluate calls that have not been evaluated yet.
+
+    Already-evaluated calls are skipped by default. Re-evaluating rewrites
+    evaluation.json, and the "validated": true flags in there are hand-set after
+    listening to the audio — the most expensive thing in this project. Adding two
+    new calls must not silently discard that work. --force re-runs anyway, and
+    carries the existing flags across.
+    """
+    count = skipped = 0
     for meta_path in sorted(settings.artifacts_dir.glob("*/metadata.json")):
         call_dir = meta_path.parent
         if not (call_dir / "transcript.txt").exists():
             continue
-        meta = json.loads(meta_path.read_text())
+
+        existing_path = call_dir / "evaluation.json"
+        if existing_path.exists() and not force:
+            skipped += 1
+            continue
+
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
         scenario_id = meta.get("scenario_id")
         if not scenario_id:
             print(f"  {call_dir.name}: no scenario in metadata, skipping")
             continue
+
+        previously_validated = _validated_keys(existing_path)
         scenario = find_scenario(scenario_id)
         result = evaluate_call_dir(settings, call_dir, scenario)
+
+        restored = 0
+        for finding in result.get("findings", []):
+            if _finding_key(finding) in previously_validated:
+                finding["validated"] = True
+                restored += 1
+        if restored:
+            existing_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+
         n = len(result.get("findings", []))
-        print(f"  {call_dir.name}: {n} candidate finding(s) -> evaluation.json")
+        note = f", {restored} validation(s) carried over" if restored else ""
+        print(f"  {call_dir.name}: {n} candidate finding(s){note}")
         count += n
-    print(f"\n{count} candidates. Listen to each recording, then set")
+
+    if skipped:
+        print(f"  ({skipped} already evaluated — pass --force to redo them)")
+    print(f"\n{count} new candidates. Listen to each recording, then set")
     print('"validated": true on the ones that hold up, and run --report.')
     return 0
+
+
+def _finding_key(finding: dict) -> tuple[str, str]:
+    return (finding.get("timestamp", ""), (finding.get("title") or "").strip().lower())
+
+
+def _validated_keys(eval_path: Path) -> set[tuple[str, str]]:
+    if not eval_path.exists():
+        return set()
+    try:
+        data = json.loads(eval_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return set()
+    return {
+        _finding_key(f)
+        for f in data.get("findings", [])
+        if f.get("validated") is True
+    }
 
 
 def build_report(settings) -> int:
     rows = []
     for eval_path in sorted(settings.artifacts_dir.glob("*/evaluation.json")):
         call_dir = eval_path.parent
-        data = json.loads(eval_path.read_text())
+        data = json.loads(eval_path.read_text(encoding="utf-8"))
         for finding in data.get("findings", []):
             if finding.get("validated") is True:
                 rows.append((call_dir.name, data.get("scenario_id", "?"), finding))
@@ -91,7 +138,7 @@ def build_report(settings) -> int:
         lines.append("| — | — | — | — | _No validated findings yet._ | — | — |")
 
     out = Path("docs/bug-report.md")
-    out.write_text("\n".join(lines) + "\n")
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"wrote {out} with {len(rows)} validated finding(s)")
     return 0
 
@@ -105,6 +152,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--evaluate", action="store_true")
     parser.add_argument("--report", action="store_true")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-evaluate calls that already have an evaluation.json",
+    )
     args = parser.parse_args()
     if not (args.evaluate or args.report):
         parser.error("pass --evaluate or --report")
@@ -116,7 +168,7 @@ def main() -> int:
         return 2
 
     if args.evaluate:
-        return evaluate_all(settings)
+        return evaluate_all(settings, force=args.force)
     return build_report(settings)
 
 

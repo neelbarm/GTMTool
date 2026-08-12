@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from xml.sax.saxutils import quoteattr
 
 from fastapi import FastAPI, Request, WebSocket
 from fastapi.responses import PlainTextResponse
@@ -46,12 +47,15 @@ async def voice(request: Request) -> PlainTextResponse:
     call_id = request.query_params.get("call_id", "")
     log.info("voice webhook: scenario=%s call_id=%s", scenario_id, call_id)
 
+    # quoteattr, not an f-string alone: a scenario or label containing & or "
+    # would otherwise produce malformed TwiML, which Twilio rejects (12100) after
+    # the CLI has already told the user the call was placed.
     twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Connect>
-    <Stream url="{settings.websocket_url}">
-      <Parameter name="scenario" value="{scenario_id}" />
-      <Parameter name="call_id" value="{call_id}" />
+    <Stream url={quoteattr(settings.websocket_url)}>
+      <Parameter name="scenario" value={quoteattr(scenario_id)} />
+      <Parameter name="call_id" value={quoteattr(call_id)} />
     </Stream>
   </Connect>
 </Response>"""
