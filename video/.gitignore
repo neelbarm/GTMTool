@@ -1,0 +1,10 @@
+node_modules/
+out/
+.remotion/
+
+# Your photos, videos and music stay on your machine — never committed.
+public/media/*
+!public/media/.gitkeep
+public/*.mp3
+public/*.m4a
+public/*.wav
