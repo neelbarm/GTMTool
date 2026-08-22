@@ -1,8 +1,15 @@
-"use client";
-import { useParams } from "next/navigation";
-import { Inbox } from "@/components/pages/Inbox";
+import { Suspense } from "react";
+import { THREADS } from "@/data/store";
+import { ThreadRoute } from "@/components/routes";
+
+export function generateStaticParams() {
+  return THREADS.map((t) => ({ id: t.id }));
+}
 
 export default function Page() {
-  const { id } = useParams<{ id: string }>();
-  return <Inbox threadId={id} />;
+  return (
+    <Suspense>
+      <ThreadRoute />
+    </Suspense>
+  );
 }

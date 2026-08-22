@@ -1,7 +1,16 @@
-"use client";
-import { WithReturn } from "../guard";
-import { ReviewWorkspace } from "@/components/pages/ReviewWorkspace";
+import { Suspense } from "react";
+import { RETURNS } from "@/data/store";
+import { ReviewRoute } from "@/components/routes";
+
+/** Pre-renders every return, so the whole product can ship as static HTML. */
+export function generateStaticParams() {
+  return RETURNS.map((r) => ({ id: r.id }));
+}
 
 export default function Page() {
-  return <WithReturn>{(ret) => <ReviewWorkspace ret={ret} />}</WithReturn>;
+  return (
+    <Suspense>
+      <ReviewRoute />
+    </Suspense>
+  );
 }

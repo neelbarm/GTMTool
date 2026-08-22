@@ -1,7 +1,16 @@
-"use client";
-import { WithReturn } from "../guard";
-import { DocumentLibrary } from "@/components/pages/DocumentLibrary";
+import { Suspense } from "react";
+import { RETURNS } from "@/data/store";
+import { DocumentsRoute } from "@/components/routes";
+
+/** Pre-renders every return, so the whole product can ship as static HTML. */
+export function generateStaticParams() {
+  return RETURNS.map((r) => ({ id: r.id }));
+}
 
 export default function Page() {
-  return <WithReturn>{(ret) => <DocumentLibrary ret={ret} />}</WithReturn>;
+  return (
+    <Suspense>
+      <DocumentsRoute />
+    </Suspense>
+  );
 }

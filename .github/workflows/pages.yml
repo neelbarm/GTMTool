@@ -1,0 +1,67 @@
+name: Deploy Meridian to GitHub Pages
+
+# The prototype has no server, so it ships as a fully pre-rendered static site.
+# `npm run build:static` sets STATIC_EXPORT=1, which turns on Next's export
+# output and emits every return and conversation as HTML via generateStaticParams.
+
+on:
+  push:
+    branches: [claude/software-engineering-assessment-czi5l4]
+    paths:
+      - "tax-platform/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; queue them instead of cancelling a live one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tax-platform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tax-platform/package-lock.json
+
+      - run: npm ci
+
+      # Also turns Pages on for the repository if it isn't already.
+      - id: pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      # Pages serves a project site from /<repo>/, so the app needs a base path.
+      - run: npm run build:static
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+
+      - run: touch out/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: tax-platform/out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
