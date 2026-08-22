@@ -186,6 +186,20 @@ export function scoreReturn(ret: TaxReturn, now: Date = TODAY): ScoredReturn {
   return { ret, score, reasons, bucket, daysToDue, waiting };
 }
 
+/**
+ * "At risk" needs its own definition because a shared statutory deadline makes
+ * days-remaining useless on its own — every 1040 is due 15 April, so a naive
+ * "due within a fortnight" filter reads zero all season and then everything at
+ * once. What actually predicts trouble is a return still sitting early in the
+ * process with the deadline in sight, plus anything carrying an IRS notice.
+ */
+export function isAtRisk(s: ScoredReturn) {
+  if (s.bucket === "done") return false;
+  if (s.ret.flags.includes("irs-notice")) return true;
+  const early = s.ret.stage === "intake" || s.ret.stage === "prepare";
+  return early && s.daysToDue <= 35;
+}
+
 export function rank(returns: TaxReturn[], now: Date = TODAY): ScoredReturn[] {
   return returns
     .map((r) => scoreReturn(r, now))

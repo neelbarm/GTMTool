@@ -10,7 +10,7 @@ import { CLIENT_BY_ID, CLIENTS, RETURNS } from "@/data/store";
 import { STAGES } from "@/data/taxonomy";
 import { person, PEOPLE, FIRM } from "@/data/people";
 import { compactMoney, daysUntil, plural } from "@/lib/format";
-import { rank, scoreReturn } from "@/lib/priority";
+import { isAtRisk, rank, scoreReturn } from "@/lib/priority";
 import { Avatar, Badge, Card, cx, EmptyState, SearchInput, SectionHeader, Stat, Tip } from "@/components/ui";
 import { StatusInline } from "@/components/status";
 
@@ -130,7 +130,7 @@ export function PracticePage() {
   const scored = React.useMemo(() => rank(all), [all]);
 
   const open = all.filter((r) => r.stage !== "accepted" && r.stage !== "filed");
-  const atRisk = scored.filter((s) => !s.waiting && s.daysToDue <= 14 && s.ret.stage !== "signoff");
+  const atRisk = scored.filter(isAtRisk);
   const waiting = scored.filter((s) => s.waiting);
   const fees = all.reduce((a, r) => a + r.fee, 0);
 
@@ -167,7 +167,7 @@ export function PracticePage() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Open returns" value={open.length} hint={`of ${all.length} this season`} />
-        <Stat label="At risk" tone="warn" value={atRisk.length} hint="Under 14 days and not at sign-off" />
+        <Stat label="At risk" tone="warn" value={atRisk.length} hint="Still early in the process with the deadline in sight" />
         <Stat label="Waiting on clients" tone="neutral" value={waiting.length} hint="Cannot be progressed internally" />
         <Stat label="Engaged fees" value={compactMoney(fees)} hint="Across every open engagement" />
       </div>
@@ -187,6 +187,7 @@ export function PracticePage() {
                 <span className="min-w-0 flex-1">
                   <Tip
                     wide
+                    className="w-full"
                     content={`${s.open} open returns, weighted load ${s.load}. ${s.urgent} of them are due inside a fortnight with the ball on our side.`}
                   >
                     <span className="block h-4 w-full rounded-[3px] bg-sunken">
@@ -197,7 +198,7 @@ export function PracticePage() {
                     </span>
                   </Tip>
                 </span>
-                <span className="tnum w-8 shrink-0 text-right text-[12px] font-semibold text-ink">{s.open}</span>
+                <span className="tnum w-8 shrink-0 text-right text-[12px] font-semibold text-ink">{s.load}</span>
                 {s.urgent > 2 ? (
                   <Badge tone="warn" size="sm">
                     {s.urgent} urgent

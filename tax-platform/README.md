@@ -133,6 +133,12 @@ minutes.
 
 ---
 
+## Hosting
+
+Nothing to configure — no environment variables, no services. Deployment
+options, including a pre-built drag-and-drop bundle for Netlify and a Dockerfile
+for Railway, are in **[DEPLOY.md](DEPLOY.md)**.
+
 ## Running it
 
 ```bash

@@ -17,7 +17,7 @@ import {
 import { Page, PageHeader } from "@/components/shell/AppShell";
 import { useSession, useMe } from "@/components/session";
 import { useScopedReturns } from "@/components/hooks";
-import { BUCKET_META, bucketise, rank, type Bucket, type ScoredReturn } from "@/lib/priority";
+import { BUCKET_META, bucketise, isAtRisk, rank, type Bucket, type ScoredReturn } from "@/lib/priority";
 import { STAGES, STAGE_BY_ID } from "@/data/taxonomy";
 import { FILING_DEADLINE, TODAY } from "@/data/generate";
 import { compactMoney, daysUntil, plural } from "@/lib/format";
@@ -62,7 +62,7 @@ export function FirmToday() {
   const buckets = React.useMemo(() => bucketise(scored), [scored]);
 
   const daysLeft = daysUntil(FILING_DEADLINE);
-  const atRisk = scored.filter((s) => !s.waiting && s.daysToDue <= 14 && s.ret.stage !== "signoff").length;
+  const atRisk = scored.filter(isAtRisk).length;
   const filedRecently = all.filter(
     (r) => (r.stage === "filed" || r.stage === "accepted") && daysUntil(r.lastActivity) > -8,
   ).length;
@@ -123,7 +123,7 @@ export function FirmToday() {
           label="At risk"
           tone="warn"
           value={atRisk}
-          hint={`Under 14 days out and not yet at sign-off.`}
+          hint="Still early in the process with the deadline in sight." 
           icon={<AlertTriangle className="h-3.5 w-3.5" />}
         />
         <Stat
