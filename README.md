@@ -1,3 +1,40 @@
+# Repository contents
+
+Two separate assessment submissions live in this repository.
+
+---
+
+## 1 · Meridian — an AI-powered tax platform  →  [`tax-platform/`](tax-platform/)
+
+**The current submission.** A working prototype for the AI Engineer case study *Designing an
+AI-Powered Tax Platform From Scratch*: one cohesive greenfield product answering all ten of the
+brief's challenges — source-document traceability, contextual collaboration, first-run onboarding,
+context-preserving navigation, six roles in one shell, a shared status model, a ranked and
+explainable work queue, a consistent affordance system, navigable complexity at volume, and an AI
+interaction model built for trust.
+
+Next.js 16 · React 19 · TypeScript · Tailwind v4. No backend, no auth, no services.
+
+```bash
+cd tax-platform
+npm install
+npm run dev
+```
+
+Full write-up, including what is genuinely wired up versus simulated:
+**[tax-platform/README.md](tax-platform/README.md)**.
+
+---
+
+## 2 · Pretty Good AI voice tester  →  everything else in this repository
+
+An earlier, unrelated submission: a harness that places automated phone calls to an assessment
+line, plays a realistic fictional patient, and captures a two-sided recording, a speaker-labelled
+transcript, structured event logs and a post-call analysis pass. Its documentation follows below
+and is unchanged.
+
+---
+
 # Pretty Good AI voice tester
 
 Places automated phone calls to the Pretty Good AI assessment line, plays a

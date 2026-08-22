@@ -1,0 +1,466 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   MERIDIAN DESIGN TOKENS
+   ----------------------------------------------------------------------------
+   One rule governs colour in this product:
+
+     HUE encodes PROVENANCE (where a value came from / what state it is in)
+     ORNAMENT encodes AFFORDANCE (what you are allowed to do to it)
+
+   Hue is therefore reserved and never decorative:
+     brand/blue   navigation & primary action
+     violet       AI-generated, not yet accepted by a human
+     green        verified by a human
+     amber        needs a decision / awaiting someone
+     red          blocked, conflicting, or overdue
+     neutral      locked / computed / read-only
+
+   Colour is never the only carrier of meaning: every state also ships a glyph
+   and a word. See /system for the full specification.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces — warm neutral, so documents read as paper against product chrome */
+  --canvas: oklch(0.984 0.0025 90);
+  --surface: oklch(1 0 0);
+  --raised: oklch(0.972 0.003 90);
+  --sunken: oklch(0.955 0.004 90);
+  --overlay: oklch(1 0 0);
+
+  /* Lines */
+  --line: oklch(0.906 0.004 95);
+  --line-strong: oklch(0.845 0.006 95);
+
+  /* Ink */
+  --ink: oklch(0.235 0.008 265);
+  --ink2: oklch(0.462 0.012 265);
+  --ink3: oklch(0.604 0.011 265);
+  --ink4: oklch(0.726 0.009 265);
+
+  /* Brand — navigation and primary action */
+  --brand: oklch(0.523 0.163 262);
+  --brand-hover: oklch(0.465 0.168 262);
+  --brand-ink: oklch(0.468 0.170 262);
+  --brand-soft: oklch(0.958 0.024 262);
+  --brand-line: oklch(0.862 0.062 262);
+  --brand-on: oklch(0.995 0.002 262);
+
+  /* AI — machine-produced, not yet accepted */
+  --ai: oklch(0.552 0.192 302);
+  --ai-ink: oklch(0.482 0.196 302);
+  --ai-soft: oklch(0.962 0.028 302);
+  --ai-line: oklch(0.866 0.070 302);
+
+  /* Verified by a human */
+  --good: oklch(0.545 0.128 155);
+  --good-ink: oklch(0.462 0.118 155);
+  --good-soft: oklch(0.958 0.032 155);
+  --good-line: oklch(0.852 0.072 155);
+
+  /* Needs a decision */
+  --warn: oklch(0.655 0.142 72);
+  --warn-ink: oklch(0.508 0.122 62);
+  --warn-soft: oklch(0.964 0.045 82);
+  --warn-line: oklch(0.868 0.088 76);
+
+  /* Blocked / conflicting / overdue */
+  --crit: oklch(0.552 0.198 25);
+  --crit-ink: oklch(0.498 0.198 25);
+  --crit-soft: oklch(0.962 0.026 25);
+  --crit-line: oklch(0.872 0.076 25);
+
+  /* --- Chart colour ------------------------------------------------------
+     Return stages are ORDERED, so the pipeline uses a single-hue sequential
+     ramp, not a categorical one. The categorical slots exist only for the
+     genuinely unordered comparison (service line). Both ramps are validated
+     for lightness band, chroma floor, CVD separation and surface contrast in
+     BOTH modes — the numbers are printed on /system. */
+  --seq-1: oklch(0.770 0.082 262);
+  --seq-2: oklch(0.685 0.115 262);
+  --seq-3: oklch(0.600 0.148 262);
+  --seq-4: oklch(0.515 0.168 262);
+  --seq-5: oklch(0.425 0.152 262);
+
+  --cat-1: oklch(0.520 0.162 262);
+  --cat-2: oklch(0.640 0.135 68);
+  --cat-3: oklch(0.615 0.140 195);
+  --cat-4: oklch(0.500 0.170 312);
+
+  --focus: oklch(0.523 0.163 262);
+
+  --shadow-sm: 0 1px 2px oklch(0.25 0.02 265 / 0.06);
+  --shadow-md: 0 2px 4px oklch(0.25 0.02 265 / 0.05), 0 6px 16px oklch(0.25 0.02 265 / 0.07);
+  --shadow-lg: 0 1px 2px oklch(0.25 0.02 265 / 0.05), 0 12px 32px oklch(0.25 0.02 265 / 0.12);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --canvas: oklch(0.163 0.005 265);
+  --surface: oklch(0.199 0.006 265);
+  --raised: oklch(0.234 0.007 265);
+  --sunken: oklch(0.180 0.006 265);
+  --overlay: oklch(0.234 0.007 265);
+
+  --line: oklch(0.296 0.008 265);
+  --line-strong: oklch(0.398 0.010 265);
+
+  --ink: oklch(0.952 0.004 265);
+  --ink2: oklch(0.762 0.009 265);
+  --ink3: oklch(0.622 0.011 265);
+  --ink4: oklch(0.498 0.011 265);
+
+  --brand: oklch(0.702 0.142 262);
+  --brand-hover: oklch(0.772 0.128 262);
+  --brand-ink: oklch(0.762 0.126 262);
+  --brand-soft: oklch(0.288 0.058 262);
+  --brand-line: oklch(0.392 0.086 262);
+  --brand-on: oklch(0.155 0.02 262);
+
+  --ai: oklch(0.732 0.148 302);
+  --ai-ink: oklch(0.788 0.128 302);
+  --ai-soft: oklch(0.292 0.062 302);
+  --ai-line: oklch(0.408 0.092 302);
+
+  --good: oklch(0.722 0.138 155);
+  --good-ink: oklch(0.782 0.122 155);
+  --good-soft: oklch(0.278 0.052 155);
+  --good-line: oklch(0.378 0.078 155);
+
+  --warn: oklch(0.796 0.132 78);
+  --warn-ink: oklch(0.842 0.118 80);
+  --warn-soft: oklch(0.292 0.052 68);
+  --warn-line: oklch(0.398 0.078 72);
+
+  --crit: oklch(0.678 0.176 25);
+  --crit-ink: oklch(0.752 0.146 25);
+  --crit-soft: oklch(0.288 0.062 25);
+  --crit-line: oklch(0.402 0.094 25);
+
+  --seq-1: oklch(0.420 0.095 262);
+  --seq-2: oklch(0.515 0.125 262);
+  --seq-3: oklch(0.610 0.145 262);
+  --seq-4: oklch(0.705 0.140 262);
+  --seq-5: oklch(0.815 0.105 262);
+
+  --cat-1: oklch(0.640 0.160 262);
+  --cat-2: oklch(0.660 0.130 68);
+  --cat-3: oklch(0.640 0.120 192);
+  --cat-4: oklch(0.600 0.170 312);
+
+  --focus: oklch(0.702 0.142 262);
+
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.4);
+  --shadow-md: 0 2px 4px oklch(0 0 0 / 0.35), 0 6px 16px oklch(0 0 0 / 0.45);
+  --shadow-lg: 0 1px 2px oklch(0 0 0 / 0.4), 0 12px 32px oklch(0 0 0 / 0.6);
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-sunken: var(--sunken);
+  --color-overlay: var(--overlay);
+
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink2);
+  --color-ink3: var(--ink3);
+  --color-ink4: var(--ink4);
+
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-line: var(--brand-line);
+  --color-brand-on: var(--brand-on);
+
+  --color-ai: var(--ai);
+  --color-ai-ink: var(--ai-ink);
+  --color-ai-soft: var(--ai-soft);
+  --color-ai-line: var(--ai-line);
+
+  --color-good: var(--good);
+  --color-good-ink: var(--good-ink);
+  --color-good-soft: var(--good-soft);
+  --color-good-line: var(--good-line);
+
+  --color-warn: var(--warn);
+  --color-warn-ink: var(--warn-ink);
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-line: var(--warn-line);
+
+  --color-crit: var(--crit);
+  --color-crit-ink: var(--crit-ink);
+  --color-crit-soft: var(--crit-soft);
+  --color-crit-line: var(--crit-line);
+
+  --color-seq-1: var(--seq-1);
+  --color-seq-2: var(--seq-2);
+  --color-seq-3: var(--seq-3);
+  --color-seq-4: var(--seq-4);
+  --color-seq-5: var(--seq-5);
+
+  --color-cat-1: var(--cat-1);
+  --color-cat-2: var(--cat-2);
+  --color-cat-3: var(--cat-3);
+  --color-cat-4: var(--cat-4);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --shadow-e1: var(--shadow-sm);
+  --shadow-e2: var(--shadow-md);
+  --shadow-e3: var(--shadow-lg);
+}
+
+/* ========================================================================== */
+
+* {
+  border-color: var(--line);
+  min-width: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv05" 1, "cv08" 1, "ss03" 1;
+}
+
+/* Every figure in a tax product is compared against the figure above it. */
+.tnum,
+table,
+input[type="text"],
+input[type="number"] {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+::selection {
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+}
+
+/* Scrollbars: present but recessive — this product has a lot of scrollable panes */
+@supports selector(::-webkit-scrollbar) {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in oklch, var(--ink4) 45%, transparent);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklch, var(--ink3) 60%, transparent);
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   AFFORDANCE PRIMITIVES  (Challenge 08)
+   The ornament — not the colour — is what tells you the interaction.
+   -------------------------------------------------------------------------- */
+
+/* Editable: a dashed baseline that only firms up on hover. Reads as "a slot". */
+.aff-editable {
+  border-bottom: 1px dashed var(--line-strong);
+  cursor: text;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+.aff-editable:hover {
+  background: var(--raised);
+  border-bottom-color: var(--ink3);
+}
+
+/* AI-suggested: a solid violet baseline. Same slot, different provenance. */
+.aff-ai {
+  border-bottom: 1px solid var(--ai-line);
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+.aff-ai:hover {
+  background: var(--ai-soft);
+  border-bottom-color: var(--ai);
+}
+
+/* Locked: no ornament at all, and the cursor says so. */
+.aff-locked {
+  cursor: not-allowed;
+}
+
+/* Navigational: underline appears on hover, never at rest (keeps tables calm). */
+.aff-link {
+  text-decoration-color: transparent;
+  text-decoration-line: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  transition: text-decoration-color 120ms ease, color 120ms ease;
+}
+.aff-link:hover {
+  text-decoration-color: currentColor;
+}
+
+/* --------------------------------------------------------------------------
+   Motion — short, and only ever to explain a change of place
+   -------------------------------------------------------------------------- */
+
+@keyframes m-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes m-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes m-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes m-slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes m-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--brand) 45%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+@keyframes m-shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+.a-fade-up {
+  animation: m-fade-up 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.a-fade {
+  animation: m-fade 180ms ease both;
+}
+.a-scale-in {
+  animation: m-scale-in 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.a-slide-left {
+  animation: m-slide-left 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.a-pulse {
+  animation: m-pulse-ring 1600ms ease-out 2;
+}
+
+.a-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklch, var(--ai) 14%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: m-shimmer 1400ms linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Utility: hide the native number-input spinners in figure fields */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+/* Utility: a hairline that survives sticky table headers */
+.hairline-b {
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+.hairline-t {
+  box-shadow: inset 0 1px 0 var(--line);
+}
+
+/* Paper: the visual language for anything that represents a source document */
+.paper {
+  background:
+    linear-gradient(to bottom, oklch(1 0 0), oklch(0.995 0.002 90)),
+    var(--surface);
+  color: oklch(0.22 0.008 265);
+}
+.dark .paper {
+  background: oklch(0.912 0.004 90);
+  color: oklch(0.20 0.008 265);
+}
