@@ -61,6 +61,10 @@ Switch at any time from the account button — no sign-out, no separate logins.
 - **Nadia Solomon** — Business owner with an entity return and a personal one.
 - **Ravi Chandra** — Has never signed in. The first-run experience.
 
+A narration script for the video deliverable is in
+**[WALKTHROUGH.md](WALKTHROUGH.md)** — a timed route that hits all ten challenges in about eight
+minutes.
+
 ## A five-minute tour
 
 1. **`/` → Start as a CPA.** The queue is ranked by a real scoring function — click any score to
