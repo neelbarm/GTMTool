@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Overture</title>
+<meta name="description" content="A go-to-market planner. Pick a motion, set the economics, allocate the mix, and see the twelve-month pipeline before you spend a dollar.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..800&family=Archivo:wdth,wght@75..100,300..700&display=swap">
+<style>
+/* Layout: a vertical score. Chapters on the left rail, instruments on the right,
+   a live tape at the bottom that reads out the plan as it changes. */
+:root{
+  --paper:#EEF0EE;
+  --paper-2:#E3E6E3;
+  --ink:#121414;
+  --ink-2:#4A5050;
+  --ink-3:#8C9393;
+  --line:rgba(18,20,20,.14);
+  --blue:#1F2BE6;
+  --blue-ink:#FFFFFF;
+  --surface:#FFFFFF;
+  --good:#167A52;
+  --warn:#B3650D;
+  --bad:#B42318;
+  --display:"Bricolage Grotesque","Archivo Narrow","Helvetica Neue",Arial,sans-serif;
+  --body:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --gutter:clamp(16px,4vw,56px);
+  --ease:cubic-bezier(.22,1,.36,1);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#111313; --paper-2:#1A1D1D; --ink:#EDEFED; --ink-2:#B4BABA; --ink-3:#737A7A;
+    --line:rgba(237,239,237,.16); --blue:#5C66FF; --blue-ink:#FFFFFF; --surface:#1A1D1D;
+    --good:#4CC38A; --warn:#F0A04B; --bad:#F26B5E; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#111313; --paper-2:#1A1D1D; --ink:#EDEFED; --ink-2:#B4BABA; --ink-3:#737A7A;
+  --line:rgba(237,239,237,.16); --blue:#5C66FF; --blue-ink:#FFFFFF; --surface:#1A1D1D;
+  --good:#4CC38A; --warn:#F0A04B; --bad:#F26B5E; color-scheme:dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--body);font-size:16px;line-height:1.5;
+  font-variation-settings:"wdth" 100;
+  overflow-x:hidden;cursor:default;
+}
+body.js .cur{display:block}
+img{max-width:100%}
+a{color:inherit}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+::selection{background:var(--blue);color:var(--blue-ink)}
+
+/* Type scale */
+.eyebrow{font-family:var(--body);font-weight:600;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
+.h-display{font-family:var(--display);font-variation-settings:"wdth" 78,"opsz" 96;font-weight:800;line-height:.86;letter-spacing:-.03em;text-wrap:balance;margin:0}
+.h-chapter{font-family:var(--display);font-variation-settings:"wdth" 82,"opsz" 60;font-weight:700;font-size:clamp(2rem,5.2vw,4.4rem);line-height:.95;letter-spacing:-.025em;text-wrap:balance;margin:0}
+.lede{font-size:clamp(1.05rem,1.5vw,1.3rem);line-height:1.45;color:var(--ink-2);max-width:34ch;text-wrap:pretty}
+.num{font-variant-numeric:tabular-nums}
+
+/* Grain */
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:50;opacity:.5;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .07 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+:root[data-theme="dark"] body::before{mix-blend-mode:screen;opacity:.35}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) body::before{mix-blend-mode:screen;opacity:.35}}
+
+/* Cursor */
+.cur{display:none;position:fixed;left:0;top:0;width:10px;height:10px;border-radius:50%;background:var(--blue);pointer-events:none;z-index:60;transform:translate(-50%,-50%);transition:width .25s var(--ease),height .25s var(--ease),opacity .2s}
+.cur.big{width:44px;height:44px;opacity:.35}
+@media (hover:none),(pointer:coarse){.cur{display:none!important}}
+
+/* Nav */
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px var(--gutter);background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.brand{font-family:var(--display);font-variation-settings:"wdth" 80;font-weight:800;font-size:1.25rem;letter-spacing:-.02em;display:flex;align-items:center;gap:10px;text-decoration:none}
+.brand i{display:inline-block;width:10px;height:10px;background:var(--blue);border-radius:50%}
+.nav-links{display:flex;gap:22px;font-size:.85rem;font-weight:500}
+.nav-links a{text-decoration:none;color:var(--ink-2);position:relative}
+.nav-links a::after{content:"";position:absolute;left:0;right:100%;bottom:-4px;height:1.5px;background:var(--ink);transition:right .3s var(--ease)}
+.nav-links a:hover{color:var(--ink)}
+.nav-links a:hover::after{right:0}
+@media (max-width:640px){.nav-links{display:none}}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:12px 20px;border-radius:999px;background:var(--ink);color:var(--paper);font-weight:600;font-size:.9rem;text-decoration:none;position:relative;overflow:hidden;transition:transform .35s var(--ease)}
+.btn span{position:relative;z-index:1}
+.btn::before{content:"";position:absolute;inset:0;background:var(--blue);transform:translateY(101%);transition:transform .4s var(--ease);border-radius:inherit}
+.btn:hover::before{transform:translateY(0)}
+.btn:hover{color:#fff}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn.ghost:hover{color:#fff;box-shadow:inset 0 0 0 1.5px var(--blue)}
+
+/* Hero */
+.hero{padding:clamp(56px,9vw,120px) var(--gutter) clamp(40px,6vw,80px);position:relative;overflow:hidden}
+.hero .h-display{font-size:clamp(4.2rem,15.5vw,15rem)}
+.hero .word{display:block;overflow:hidden;padding-bottom:.14em;margin-bottom:-.14em}
+.hero .word span{display:inline-block;transform:translateY(0)}
+body.js .hero .word span{transform:translateY(110%)}
+body.js.in .hero .word span{animation:rise 1.1s var(--ease) forwards}
+.hero .word:nth-child(2) span{animation-delay:.08s}
+.hero .word:nth-child(3) span{animation-delay:.16s}
+@keyframes rise{to{transform:translateY(0)}}
+.hero .word.blue span{color:var(--blue)}
+.hero-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:40px;align-items:end;margin-top:clamp(28px,4vw,56px)}
+@media (max-width:860px){.hero-grid{grid-template-columns:1fr}}
+.hero-meta{display:flex;flex-direction:column;gap:18px;align-items:flex-start}
+.hero-note{display:grid;grid-template-columns:auto 1fr;gap:10px 16px;font-size:.85rem;color:var(--ink-2);border-top:1px solid var(--line);padding-top:16px;max-width:38ch}
+.hero-note b{font-weight:600;color:var(--ink)}
+.orbit{position:absolute;right:calc(var(--gutter) * -1);top:-10%;width:min(58vw,720px);aspect-ratio:1;pointer-events:none;opacity:.9}
+@media (max-width:860px){.orbit{width:90vw;right:-30vw;top:-8%;opacity:.5}}
+
+/* Tape */
+.tape{border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;background:var(--ink);color:var(--paper);font-family:var(--display);font-variation-settings:"wdth" 85;font-weight:600;font-size:1.05rem;letter-spacing:.01em}
+.tape-track{display:flex;width:max-content;animation:tape 36s linear infinite;padding:14px 0}
+.tape-track:hover{animation-play-state:paused}
+.tape-track span{padding:0 28px;white-space:nowrap;display:inline-flex;align-items:center;gap:28px}
+.tape-track span::after{content:"";width:8px;height:8px;background:var(--blue);border-radius:50%;flex:none}
+@keyframes tape{to{transform:translateX(-50%)}}
+
+/* Chapters */
+.chapter{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.9fr);gap:clamp(24px,4vw,72px);padding:clamp(56px,8vw,120px) var(--gutter);border-top:1px solid var(--line)}
+.chapter.alt{background:var(--paper-2)}
+@media (max-width:900px){.chapter{grid-template-columns:1fr}}
+.rail{position:sticky;top:calc(84px + env(safe-area-inset-top,0px));align-self:start;display:flex;flex-direction:column;gap:18px}
+@media (max-width:900px){.rail{position:static}}
+.rail .n{font-family:var(--display);font-variation-settings:"wdth" 75;font-weight:300;font-size:clamp(3rem,6vw,5.5rem);line-height:.8;letter-spacing:-.04em;color:var(--ink-3)}
+.rail .rule{height:1.5px;width:56px;background:var(--blue)}
+.reveal{opacity:1;transform:none}
+body.js .reveal{transform:translateY(26px);transition:transform 1s var(--ease)}
+body.js .reveal.on{transform:none}
+
+/* Motion cards */
+.motions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:560px){.motions{grid-template-columns:1fr}}
+.motion{position:relative;text-align:left;padding:22px 22px 20px;border-radius:18px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);display:flex;flex-direction:column;gap:14px;min-height:200px;transform-style:preserve-3d;transition:box-shadow .3s var(--ease),transform .5s var(--ease);will-change:transform}
+.motion:hover{box-shadow:inset 0 0 0 1px var(--ink)}
+.motion[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--blue)}
+.motion .tag{display:flex;justify-content:space-between;align-items:center;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600;color:var(--ink-2)}
+.motion .tag i{width:12px;height:12px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--ink-3);transition:background .25s,box-shadow .25s}
+.motion[aria-pressed="true"] .tag i{background:var(--blue);box-shadow:inset 0 0 0 1.5px var(--blue)}
+.motion h3{font-family:var(--display);font-variation-settings:"wdth" 85;font-weight:700;font-size:1.65rem;line-height:1;letter-spacing:-.02em;margin:0}
+.motion p{margin:0;color:var(--ink-2);font-size:.92rem;line-height:1.4;flex:1}
+.motion .fit{font-size:.8rem;color:var(--ink-3);display:flex;gap:8px;flex-wrap:wrap}
+.motion .fit b{font-weight:500;color:var(--ink-2);padding:3px 9px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--line)}
+
+/* Dials */
+.dials{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:620px){.dials{grid-template-columns:1fr}}
+.dial{padding:22px;border-radius:18px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);display:flex;flex-direction:column;gap:10px}
+.dial label{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--ink-2)}
+.dial .val{font-family:var(--display);font-variation-settings:"wdth" 80;font-weight:700;font-size:clamp(2.4rem,4.5vw,3.6rem);line-height:1;letter-spacing:-.03em}
+.dial .val small{font-size:.42em;font-weight:500;color:var(--ink-3);margin-left:4px;letter-spacing:0}
+.dial .hint{font-size:.82rem;color:var(--ink-3);min-height:1.2em}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;margin:0;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:linear-gradient(to right,var(--blue) var(--p,50%),var(--line) var(--p,50%));border-radius:2px}
+input[type=range]::-moz-range-track{height:2px;background:var(--line);border-radius:2px}
+input[type=range]::-moz-range-progress{height:2px;background:var(--blue)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--paper);box-shadow:0 0 0 2px var(--ink),0 6px 16px rgba(0,0,0,.18);margin-top:-10px;transition:transform .2s var(--ease)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border:2px solid var(--ink);border-radius:50%;background:var(--paper)}
+input[type=range]:active::-webkit-slider-thumb{transform:scale(1.25)}
+
+/* Mix */
+.mixbar{display:flex;height:64px;border-radius:14px;overflow:hidden;gap:2px;background:var(--paper)}
+.mixbar div{min-width:0;transition:flex .5s var(--ease);position:relative;display:flex;align-items:flex-end;padding:8px;font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--paper);overflow:hidden;white-space:nowrap}
+.mixbar div span{opacity:0;transition:opacity .3s}
+.mixbar div:hover span{opacity:1}
+.mixlist{display:grid;gap:4px;margin-top:22px}
+.chapter>*{min-width:0}
+.mix>*{min-width:0}
+.mix{display:grid;grid-template-columns:28px 1fr 2fr 64px;gap:16px;align-items:center;padding:12px 14px;border-radius:12px;transition:background .25s}
+.mix:hover{background:var(--surface)}
+@media (max-width:620px){.mix{grid-template-columns:20px minmax(0,1fr) 56px;gap:10px}.mix input{grid-column:1/-1}.mix .name small{white-space:normal}}
+.mix i{width:14px;height:14px;border-radius:4px;display:block}
+.mix .name{display:flex;flex-direction:column;gap:2px}
+.mix .name b{font-weight:600;font-size:.95rem}
+.mix .name small{color:var(--ink-3);font-size:.78rem}
+.mix .pct{font-family:var(--display);font-variation-settings:"wdth" 85;font-weight:700;font-size:1.3rem;text-align:right}
+.mix-foot{display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:12px;flex-wrap:wrap;font-size:.85rem;color:var(--ink-2)}
+.presets{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:7px 13px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--line);font-size:.8rem;font-weight:500;transition:box-shadow .2s,background .2s}
+.chip:hover{box-shadow:inset 0 0 0 1px var(--ink)}
+
+/* Readout */
+.readout{background:var(--ink);color:var(--paper);padding:clamp(56px,8vw,120px) var(--gutter)}
+.readout .eyebrow{color:rgba(238,240,238,.6)}
+.readout-head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:40px}
+.verdict{font-family:var(--display);font-variation-settings:"wdth" 80,"opsz" 72;font-weight:600;font-size:clamp(1.9rem,4.6vw,4rem);line-height:1;letter-spacing:-.025em;max-width:22ch;text-wrap:balance;margin:12px 0 0}
+.verdict em{font-style:normal;color:var(--blue)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;background:rgba(238,240,238,.12);border-radius:16px;overflow:hidden}
+@media (max-width:900px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--ink);padding:26px 22px;display:flex;flex-direction:column;gap:6px}
+.stat .k{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600;color:rgba(238,240,238,.55)}
+.stat .v{font-family:var(--display);font-variation-settings:"wdth" 78;font-weight:700;font-size:clamp(2.2rem,4.2vw,3.6rem);line-height:1;letter-spacing:-.03em}
+.stat .s{font-size:.82rem;color:rgba(238,240,238,.6);display:flex;align-items:center;gap:8px}
+.stat .s i{width:8px;height:8px;border-radius:50%;background:var(--good);display:inline-block}
+.stat .s i.warn{background:var(--warn)}
+.stat .s i.bad{background:var(--bad)}
+.chartwrap{margin-top:40px;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:40px;align-items:start}
+@media (max-width:900px){.chartwrap{grid-template-columns:1fr}}
+.chart{position:relative;min-width:0}
+.chart svg{width:100%;height:auto;display:block;overflow:visible}
+.legend{display:flex;gap:18px;font-size:.8rem;color:rgba(238,240,238,.7);margin-bottom:12px;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.legend i{width:18px;height:2px;background:var(--blue);display:inline-block}
+.legend i.dash{background:repeating-linear-gradient(90deg,rgba(238,240,238,.7) 0 4px,transparent 4px 7px)}
+.tip{position:absolute;pointer-events:none;background:var(--paper);color:var(--ink);padding:8px 10px;border-radius:8px;font-size:.78rem;line-height:1.35;transform:translate(-50%,calc(-100% - 12px));opacity:0;transition:opacity .15s;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.tip b{font-weight:600}
+.months{display:flex;flex-direction:column;gap:0;border-top:1px solid rgba(238,240,238,.15)}
+.months .row{display:grid;grid-template-columns:40px 1fr 1fr 1fr;gap:12px;padding:10px 0;border-bottom:1px solid rgba(238,240,238,.1);font-size:.85rem;align-items:center}
+.months .row.h{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(238,240,238,.5);font-weight:600}
+.months .row span:not(:first-child){text-align:right}
+.months .row:first-child{border-top:0}
+.months-scroll{max-height:420px;overflow:auto;padding-right:6px}
+
+/* Playbook */
+.weeks{display:grid;gap:0}
+.phase{display:grid;grid-template-columns:120px 1fr;gap:24px;padding:28px 0;border-top:1px solid var(--line)}
+@media (max-width:620px){.phase{grid-template-columns:1fr;gap:10px}}
+.phase .ph{display:flex;flex-direction:column;gap:6px}
+.phase .ph b{font-family:var(--display);font-variation-settings:"wdth" 80;font-weight:700;font-size:1.5rem;line-height:1;letter-spacing:-.02em}
+.phase .ph small{color:var(--ink-3);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+.phase ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.phase li{display:grid;grid-template-columns:56px 1fr;gap:14px;align-items:baseline;font-size:.98rem;line-height:1.4;max-width:62ch}
+.phase li span{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--blue);white-space:nowrap}
+.phase li b{font-weight:600}
+
+/* Card */
+.cardwrap{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:40px;align-items:center}
+@media (max-width:900px){.cardwrap{grid-template-columns:1fr}}
+canvas.card{width:100%;height:auto;border-radius:18px;box-shadow:0 30px 80px -30px rgba(0,0,0,.45);display:block;max-width:100%;transition:transform .6s var(--ease)}
+.card-actions{display:flex;flex-direction:column;gap:18px;align-items:flex-start}
+.card-actions .row{display:flex;gap:10px;flex-wrap:wrap}
+.toast{font-size:.85rem;color:var(--ink-2);min-height:1.3em}
+
+/* Footer */
+.foot{padding:48px var(--gutter);border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:.82rem;color:var(--ink-3)}
+.foot .brand{font-size:1rem}
+.foot p{margin:0;max-width:52ch;line-height:1.5}
+
+/* Live tape (bottom) */
+.live{position:fixed;left:0;right:0;bottom:0;z-index:45;padding:0 var(--gutter) env(safe-area-inset-bottom,0px);pointer-events:none;transform:translateY(120%);transition:transform .6s var(--ease)}
+.live.on{transform:none}
+.live-in{pointer-events:auto;margin:0 auto 14px;max-width:1120px;background:var(--surface);color:var(--ink);border-radius:999px;box-shadow:0 20px 50px -20px rgba(0,0,0,.4),inset 0 0 0 1px var(--line);display:flex;align-items:center;gap:0;padding:8px 10px 8px 18px;font-size:.82rem;overflow:hidden}
+.live-in .k{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;min-width:0}
+.live-in .k div{display:flex;flex-direction:column;min-width:0}
+.live-in .k small{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.live-in .k b{font-family:var(--display);font-variation-settings:"wdth" 82;font-weight:700;font-size:1.1rem;line-height:1.1;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.live-in .btn{padding:9px 16px;font-size:.8rem;flex:none}
+@media (max-width:640px){.live-in .k{grid-template-columns:repeat(2,minmax(0,1fr))}.live-in .k div:nth-child(n+3){display:none}}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+  body.js .hero .word span{transform:none}
+  body.js .reveal{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<div class="cur" aria-hidden="true"></div>
+
+<nav class="nav">
+  <a class="brand" href="#top"><i></i>Overture</a>
+  <div class="nav-links">
+    <a href="#motion">Motion</a>
+    <a href="#economics">Economics</a>
+    <a href="#mix">Mix</a>
+    <a href="#readout">Readout</a>
+    <a href="#playbook">Playbook</a>
+  </div>
+  <a class="btn" href="#motion"><span>Plan a launch</span></a>
+</nav>
+
+<header class="hero" id="top">
+  <svg class="orbit" viewBox="0 0 600 600" aria-hidden="true">
+    <defs>
+      <radialGradient id="og" cx="50%" cy="50%" r="50%">
+        <stop offset="0" stop-color="var(--blue)" stop-opacity=".35"/>
+        <stop offset="1" stop-color="var(--blue)" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <circle cx="300" cy="300" r="290" fill="url(#og)"/>
+    <g fill="none" stroke="var(--ink)" stroke-opacity=".22" stroke-width="1">
+      <circle cx="300" cy="300" r="240" stroke-dasharray="2 6"/>
+      <circle cx="300" cy="300" r="180"/>
+      <circle cx="300" cy="300" r="120" stroke-dasharray="1 4"/>
+    </g>
+    <g id="orbit-dots">
+      <circle r="6" fill="var(--blue)"><animateMotion dur="22s" repeatCount="indefinite" path="M300,60 a240,240 0 1,1 -0.1,0"/></circle>
+      <circle r="4" fill="var(--ink)"><animateMotion dur="14s" repeatCount="indefinite" path="M300,120 a180,180 0 1,0 -0.1,0"/></circle>
+      <circle r="3" fill="var(--ink)" fill-opacity=".5"><animateMotion dur="9s" repeatCount="indefinite" path="M300,180 a120,120 0 1,1 -0.1,0"/></circle>
+    </g>
+  </svg>
+  <p class="eyebrow">A go-to-market planner</p>
+  <h1 class="h-display">
+    <span class="word"><span>Know the</span></span>
+    <span class="word"><span>number</span></span>
+    <span class="word blue"><span>before</span></span>
+    <span class="word"><span>you launch.</span></span>
+  </h1>
+  <div class="hero-grid">
+    <p class="lede">Most launch plans are a deck and a hope. Overture is the arithmetic underneath it: pick your motion, set the deal economics, allocate the budget across channels, and watch twelve months of pipeline take shape as you move the dials.</p>
+    <div class="hero-meta">
+      <div class="hero-note">
+        <b>Inputs</b><span>Four numbers you already know and one allocation you keep arguing about.</span>
+        <b>Output</b><span>Pipeline, ARR, blended CAC, payback, and a 90-day playbook ordered by what pays off first.</span>
+        <b>Runs</b><span>Entirely in your browser. Nothing leaves the page.</span>
+      </div>
+      <a class="btn ghost" href="#motion"><span>Start with the motion</span><span aria-hidden="true">&darr;</span></a>
+    </div>
+  </div>
+</header>
+
+<div class="tape" aria-hidden="true">
+  <div class="tape-track" id="tape"></div>
+</div>
+
+<main>
+<!-- 1. Motion -->
+<section class="chapter" id="motion">
+  <div class="rail reveal">
+    <div class="n">01</div>
+    <div class="rule"></div>
+    <h2 class="h-chapter">Choose the motion</h2>
+    <p class="lede">How a customer first meets the product shapes every number after it. Pick the one that matches how you actually sell, not how you wish you sold.</p>
+  </div>
+  <div class="motions reveal" id="motions" role="group" aria-label="Go-to-market motion"></div>
+</section>
+
+<!-- 2. Economics -->
+<section class="chapter alt" id="economics">
+  <div class="rail reveal">
+    <div class="n">02</div>
+    <div class="rule"></div>
+    <h2 class="h-chapter">Set the economics</h2>
+    <p class="lede">Four dials. Be honest with the win rate; it is the one everyone rounds up.</p>
+  </div>
+  <div class="dials reveal">
+    <div class="dial">
+      <label for="acv"><span>Annual contract value</span><span>ACV</span></label>
+      <div class="val num" id="acv-v"></div>
+      <input type="range" id="acv" min="0" max="1000" value="520">
+      <div class="hint" id="acv-h"></div>
+    </div>
+    <div class="dial">
+      <label for="budget"><span>Monthly GTM budget</span><span>Spend</span></label>
+      <div class="val num" id="budget-v"></div>
+      <input type="range" id="budget" min="0" max="1000" value="480">
+      <div class="hint" id="budget-h"></div>
+    </div>
+    <div class="dial">
+      <label for="win"><span>Opportunity win rate</span><span>Win</span></label>
+      <div class="val num" id="win-v"></div>
+      <input type="range" id="win" min="5" max="60" value="22">
+      <div class="hint" id="win-h"></div>
+    </div>
+    <div class="dial">
+      <label for="cycle"><span>Sales cycle</span><span>Months</span></label>
+      <div class="val num" id="cycle-v"></div>
+      <input type="range" id="cycle" min="2" max="36" value="8">
+      <div class="hint" id="cycle-h"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Mix -->
+<section class="chapter" id="mix">
+  <div class="rail reveal">
+    <div class="n">03</div>
+    <div class="rule"></div>
+    <h2 class="h-chapter">Allocate the mix</h2>
+    <p class="lede">Every channel has a price per lead, a conversion rate, a ramp, and a point where more money stops buying more pipeline. Move one and the others rebalance.</p>
+  </div>
+  <div class="reveal">
+    <div class="mixbar" id="mixbar" aria-hidden="true"></div>
+    <div class="mixlist" id="mixlist"></div>
+    <div class="mix-foot">
+      <span id="mix-note"></span>
+      <div class="presets" id="presets"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. Readout -->
+<section class="readout" id="readout">
+  <div class="readout-head">
+    <div>
+      <p class="eyebrow">The readout &middot; twelve months</p>
+      <h2 class="verdict" id="verdict"></h2>
+    </div>
+    <div class="legend" aria-hidden="true">
+      <span><i></i>Annual recurring revenue</span>
+      <span><i class="dash"></i>Pipeline created, cumulative</span>
+    </div>
+  </div>
+  <div class="stats" id="stats"></div>
+  <div class="chartwrap">
+    <div class="chart">
+      <svg id="chart" viewBox="0 0 800 360" role="img" aria-labelledby="chart-t"><title id="chart-t">Cumulative ARR and pipeline over twelve months</title></svg>
+      <div class="tip" id="tip"></div>
+    </div>
+    <div class="months-scroll">
+      <div class="months" id="months"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. Playbook -->
+<section class="chapter alt" id="playbook">
+  <div class="rail reveal">
+    <div class="n">04</div>
+    <div class="rule"></div>
+    <h2 class="h-chapter">The first ninety days</h2>
+    <p class="lede">Sequenced by ramp time. Slow channels start first so they are producing by the time the fast ones run out of easy wins.</p>
+  </div>
+  <div class="weeks reveal" id="weeks"></div>
+</section>
+
+<!-- 6. Card -->
+<section class="chapter" id="share">
+  <div class="rail reveal">
+    <div class="n">05</div>
+    <div class="rule"></div>
+    <h2 class="h-chapter">Take it with you</h2>
+    <p class="lede">A one-card brief of the plan. Save it, paste it into the deck, or send it to the person who has to approve the budget.</p>
+  </div>
+  <div class="cardwrap reveal">
+    <canvas class="card" id="card" width="1200" height="1500" aria-label="Plan summary card"></canvas>
+    <div class="card-actions">
+      <div class="row">
+        <button class="btn" id="copy"><span>Copy the brief</span></button>
+        <button class="btn ghost" id="save"><span>Save card as PNG</span></button>
+        <button class="btn ghost" id="reset"><span>Start over</span></button>
+      </div>
+      <div class="toast" id="toast" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="foot">
+  <a class="brand" href="#top"><i></i>Overture</a>
+  <p>The model uses published channel benchmarks as starting assumptions and your four inputs as the ground truth. Treat the output as a planning estimate, not a forecast. Your settings stay in this browser.</p>
+</footer>
+
+<div class="live" id="live">
+  <div class="live-in">
+    <div class="k">
+      <div><small>ARR, month 12</small><b id="l-arr">&mdash;</b></div>
+      <div><small>Customers</small><b id="l-cust">&mdash;</b></div>
+      <div><small>Blended CAC</small><b id="l-cac">&mdash;</b></div>
+      <div><small>Payback</small><b id="l-pb">&mdash;</b></div>
+    </div>
+    <a class="btn" href="#readout"><span>See readout</span></a>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+document.body.classList.add('js');
+requestAnimationFrame(()=>requestAnimationFrame(()=>document.body.classList.add('in')));
+
+/* ---------- Model ---------- */
+const CHANNELS = [
+  {id:'outbound', name:'Outbound',     sub:'SDRs, sequences, lists',         cpl:180, l2o:.12, ramp:2, sat:60000,  color:'#1F2BE6'},
+  {id:'paid',     name:'Paid media',   sub:'Search, social, retargeting',    cpl:95,  l2o:.06, ramp:1, sat:150000, color:'#121414'},
+  {id:'content',  name:'Content & SEO',sub:'Guides, comparisons, organic',   cpl:55,  l2o:.08, ramp:5, sat:40000,  color:'#6B7A77'},
+  {id:'events',   name:'Events',       sub:'Field, dinners, conferences',    cpl:420, l2o:.22, ramp:1, sat:80000,  color:'#9AA6A3'},
+  {id:'partners', name:'Partnerships', sub:'Resellers, integrations, co-sell',cpl:260,l2o:.26, ramp:4, sat:50000,  color:'#C8CFCC'},
+  {id:'product',  name:'Product-led',  sub:'Free tier, self-serve, in-app',  cpl:28,  l2o:.03, ramp:3, sat:40000,  color:'#4C57F0'},
+];
+const MOTIONS = [
+  {id:'pl',  name:'Product-led', tag:'Try first', blurb:'Users sign up, get value alone, and the sales team shows up for the expansion. Cheap leads, slow conversion, compounding.',
+    fit:['Low to mid ACV','Horizontal tools','Short cycles'],
+    mult:{product:2.2, content:1.4, outbound:.6, events:.5, paid:1.0, partners:.8},
+    mix:{product:35, content:25, paid:20, outbound:10, partners:5, events:5}},
+  {id:'sl',  name:'Sales-led',   tag:'Talk first', blurb:'An AE runs every deal from first call to signature. Expensive leads, high conversion, predictable once the team ramps.',
+    fit:['Mid to high ACV','Complex buys','Multi-stakeholder'],
+    mult:{outbound:1.5, events:1.3, product:.4, content:.9, paid:.9, partners:1.0},
+    mix:{outbound:35, events:20, paid:15, content:15, partners:10, product:5}},
+  {id:'pt',  name:'Partner-led', tag:'Borrow trust', blurb:'Someone your buyer already pays introduces you. Slow to light up, then the best conversion in the building.',
+    fit:['Regulated markets','Ecosystem plays','Long cycles'],
+    mult:{partners:1.8, events:1.2, paid:.7, outbound:.9, content:1.0, product:.8},
+    mix:{partners:35, events:20, outbound:15, content:15, paid:10, product:5}},
+  {id:'cl',  name:'Community-led', tag:'Earn attention', blurb:'The category learns from you before it buys from you. Content and events do the selling; the pipeline arrives warm.',
+    fit:['Developer tools','New categories','Opinionated brands'],
+    mult:{content:1.7, events:1.4, paid:.6, product:1.2, outbound:.8, partners:1.0},
+    mix:{content:35, events:20, product:20, outbound:10, paid:10, partners:5}},
+];
+
+const state = load() || {motion:'sl', acv:520, budget:480, win:22, cycle:8, mix:{...MOTIONS[1].mix}};
+
+/* log scale for sliders */
+const logMap = (t,min,max)=>Math.round(Math.exp(Math.log(min)+(Math.log(max)-Math.log(min))*t/1000));
+const acvOf = t=>roundNice(logMap(t,1000,250000));
+const budgetOf = t=>roundNice(logMap(t,5000,500000));
+function roundNice(v){const p=Math.pow(10,Math.floor(Math.log10(v))-1);return Math.round(v/p)*p}
+
+function run(s){
+  const motion = MOTIONS.find(m=>m.id===s.motion);
+  const acv = acvOf(s.acv), budget = budgetOf(s.budget), win = s.win/100, cycle = s.cycle/4;
+  const acvAdj = Math.min(1.6, Math.max(.45, Math.pow(12000/acv,.25)));
+  const M = 12;
+  const leads=Array(M).fill(0), opps=Array(M).fill(0), closes=Array(M+10).fill(0), spend=Array(M).fill(0);
+  const byChannel={};
+  CHANNELS.forEach(c=>{
+    const share = (s.mix[c.id]||0)/100;
+    const sp = budget*share;
+    const l2o = c.l2o*(motion.mult[c.id]||1)*acvAdj;
+    byChannel[c.id]={spend:sp*M, opps:0};
+    for(let m=0;m<M;m++){
+      const rampF = Math.min(1,(m+1)/c.ramp);
+      const sat = 1/(1+sp/c.sat);
+      const L = (sp/c.cpl)*rampF*sat;
+      const O = L*l2o;
+      leads[m]+=L; opps[m]+=O; spend[m]+=sp; byChannel[c.id].opps+=O;
+      const land = m+cycle, lo=Math.floor(land), f=land-lo;
+      closes[lo]+=O*win*(1-f); closes[lo+1]+=O*win*f;
+    }
+  });
+  let arr=0, pipe=0, cust=0;
+  const rows=[];
+  for(let m=0;m<M;m++){
+    pipe+=opps[m]*acv; cust+=closes[m]; arr=cust*acv;
+    rows.push({m:m+1, leads:leads[m], opps:opps[m], newCust:closes[m], cust, arr, pipe, spend:spend[m]});
+  }
+  const totalSpend = spend.reduce((a,b)=>a+b,0);
+  const cac = cust>0 ? totalSpend/cust : Infinity;
+  const payback = cust>0 ? cac/((acv/12)*.8) : Infinity;
+  const inFlight = closes.slice(M).reduce((a,b)=>a+b,0);
+  return {motion, acv, budget, win, cycle, rows, arr, pipe, cust, cac, payback, totalSpend, inFlight, byChannel, acvAdj};
+}
+
+/* ---------- Format ---------- */
+const money = v=>{
+  if(!isFinite(v)) return '—';
+  const a=Math.abs(v);
+  if(a>=1e9) return '$'+(v/1e9).toFixed(2)+'B';
+  const trim=x=>x.replace(/\.0+$/,'').replace(/(\.\d*?)0+$/,'$1');
+  if(a>=1e6) return '$'+trim((v/1e6).toFixed(v/1e6>=10?1:2))+'M';
+  if(a>=1e3) return '$'+trim((v/1e3).toFixed(v/1e3>=100?0:1))+'k';
+  return '$'+Math.round(v);
+};
+const int = v=>isFinite(v)?Math.round(v).toLocaleString('en-US'):'—';
+const mo = v=>isFinite(v)?(v<1?v.toFixed(1):v.toFixed(v<10?1:0))+' mo':'—';
+
+/* ---------- Render: motions ---------- */
+const $ = id=>document.getElementById(id);
+const motionsEl=$('motions');
+MOTIONS.forEach(m=>{
+  const b=document.createElement('button');
+  b.className='motion'; b.type='button'; b.dataset.id=m.id;
+  b.innerHTML=`<div class="tag"><span>${m.tag}</span><i></i></div><h3>${m.name}</h3><p>${m.blurb}</p><div class="fit">${m.fit.map(f=>`<b>${f}</b>`).join('')}</div>`;
+  b.addEventListener('click',()=>{
+    state.motion=m.id; state.mix={...m.mix};
+    renderMotions(); renderMix(); update(true);
+  });
+  b.addEventListener('pointermove',e=>{
+    const r=b.getBoundingClientRect(), x=(e.clientX-r.left)/r.width-.5, y=(e.clientY-r.top)/r.height-.5;
+    b.style.transform=`perspective(900px) rotateY(${x*7}deg) rotateX(${-y*7}deg) translateY(-2px)`;
+  });
+  b.addEventListener('pointerleave',()=>{b.style.transform=''});
+  motionsEl.appendChild(b);
+});
+function renderMotions(){
+  motionsEl.querySelectorAll('.motion').forEach(b=>b.setAttribute('aria-pressed', b.dataset.id===state.motion?'true':'false'));
+}
+
+/* ---------- Render: dials ---------- */
+const dials={
+  acv:{el:$('acv'), fmt:t=>money(acvOf(t)), hint:t=>{const v=acvOf(t);return v<5000?'Self-serve territory. Nobody should be on a call for this.':v<25000?'Inside sales. One call, maybe two.':v<80000?'Field-assisted. Expect a champion and a procurement step.':'Enterprise. Budget cycles, security review, legal.'}},
+  budget:{el:$('budget'), fmt:t=>money(budgetOf(t)), hint:t=>{const v=budgetOf(t);return v<20000?'Scrappy. Pick two channels and ignore the rest.':v<100000?'A real program. Three channels can run at once.':'Enough to saturate a channel. Watch the diminishing returns.'}},
+  win:{el:$('win'), fmt:v=>v+'<small>%</small>', hint:v=>v<15?'Below benchmark. Qualification is leaking.':v<30?'Healthy for a competitive category.':'Strong. Make sure that is not just inbound referrals.'},
+  cycle:{el:$('cycle'), fmt:v=>(v/4).toFixed(v%4?2:0).replace(/\.?0+$/,'')+'<small>months</small>', hint:v=>v<=4?'Transactional. Pipeline converts inside the quarter.':v<=14?'Standard mid-market cadence.':'Long. The first half of the year is all sowing.'},
+};
+Object.keys(dials).forEach(k=>{
+  const d=dials[k]; d.el.value=state[k];
+  d.el.addEventListener('input',()=>{state[k]=+d.el.value; renderDial(k); update(false)});
+  d.el.addEventListener('change',()=>update(true));
+  renderDial(k);
+});
+function renderDial(k){
+  const d=dials[k], v=+d.el.value;
+  $(k+'-v').innerHTML=d.fmt(v);
+  $(k+'-h').textContent=d.hint(v);
+  const p=(v-d.el.min)/(d.el.max-d.el.min)*100; d.el.style.setProperty('--p',p+'%');
+}
+
+/* ---------- Render: mix ---------- */
+const mixbar=$('mixbar'), mixlist=$('mixlist');
+CHANNELS.forEach(c=>{
+  const seg=document.createElement('div'); seg.style.background=c.color; seg.dataset.id=c.id; seg.innerHTML=`<span>${c.name}</span>`; mixbar.appendChild(seg);
+  const row=document.createElement('div'); row.className='mix';
+  row.innerHTML=`<i style="background:${c.color}"></i><div class="name"><b>${c.name}</b><small>${c.sub} · ~$${c.cpl}/lead · ${c.ramp} mo ramp</small></div><input type="range" id="mix-${c.id}" min="0" max="80" value="0" aria-label="${c.name} share"><div class="pct num" id="pct-${c.id}"></div>`;
+  mixlist.appendChild(row);
+  const inp=row.querySelector('input');
+  inp.addEventListener('input',()=>{rebalance(c.id,+inp.value); renderMix(); update(false)});
+  inp.addEventListener('change',()=>update(true));
+});
+function rebalance(id,val){
+  const others=CHANNELS.filter(c=>c.id!==id);
+  const otherSum=others.reduce((a,c)=>a+(state.mix[c.id]||0),0);
+  const target=100-val;
+  state.mix[id]=val;
+  if(otherSum===0){others.forEach(c=>state.mix[c.id]=target/others.length)}
+  else others.forEach(c=>state.mix[c.id]=(state.mix[c.id]||0)*target/otherSum);
+}
+function renderMix(){
+  CHANNELS.forEach(c=>{
+    const v=state.mix[c.id]||0;
+    const inp=$('mix-'+c.id); inp.value=Math.round(v); inp.style.setProperty('--p',(v/80*100)+'%');
+    $('pct-'+c.id).textContent=Math.round(v)+'%';
+    mixbar.querySelector(`[data-id="${c.id}"]`).style.flex=Math.max(v,.001)+' 1 0';
+  });
+}
+const presets=$('presets');
+[{n:'Reset to motion default',f:()=>({...MOTIONS.find(m=>m.id===state.motion).mix})},
+ {n:'Even split',f:()=>Object.fromEntries(CHANNELS.map(c=>[c.id,100/6]))},
+ {n:'All in on the top two',f:()=>{const top=[...CHANNELS].sort((a,b)=>(state.mix[b.id]||0)-(state.mix[a.id]||0)).slice(0,2);return Object.fromEntries(CHANNELS.map(c=>[c.id,top.includes(c)?50:0]))}}
+].forEach(p=>{const b=document.createElement('button');b.className='chip';b.type='button';b.textContent=p.n;b.addEventListener('click',()=>{state.mix=p.f();renderMix();update(true)});presets.appendChild(b)});
+
+/* ---------- Render: readout ---------- */
+const statsEl=$('stats');
+const STATS=[
+  {k:'ARR at month 12', id:'arr', v:r=>money(r.arr), s:r=>[`${money(r.pipe)} pipeline created`, 'ok']},
+  {k:'New customers', id:'cust', v:r=>int(r.cust), s:r=>[`${int(r.inFlight)} more still in cycle`, 'ok']},
+  {k:'Blended CAC', id:'cac', v:r=>money(r.cac), s:r=>{const ratio=r.cac/r.acv;return [ratio<1?'Under one year of ACV':ratio<2?'One to two years of ACV':'Over two years of ACV', ratio<1?'ok':ratio<2?'warn':'bad']}},
+  {k:'CAC payback', id:'pb', v:r=>mo(r.payback), s:r=>[r.payback<12?'Investor-grade':r.payback<24?'Workable with retention':'Burning to grow', r.payback<12?'ok':r.payback<24?'warn':'bad']},
+];
+statsEl.innerHTML=STATS.map(s=>`<div class="stat"><div class="k">${s.k}</div><div class="v num" id="st-${s.id}">—</div><div class="s" id="ss-${s.id}"><i></i><span></span></div></div>`).join('');
+
+const tweens={};
+function tweenText(el,text,key){
+  // Animate numeric portion of a formatted string.
+  const m=text.match(/^(\$?)([\d.,]+)(.*)$/);
+  if(!m||el.dataset.raw===text){el.textContent=text;el.dataset.raw=text;return}
+  const to=parseFloat(m[2].replace(/,/g,'')), from=tweens[key]??to*0.6, dec=(m[2].split('.')[1]||'').length, comma=m[2].includes(',');
+  const t0=performance.now(), dur=600;
+  cancelAnimationFrame(el._raf);
+  const step=now=>{
+    const t=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-t,3), v=from+(to-from)*e;
+    let s=v.toFixed(dec); if(comma) s=(+s).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+    el.textContent=m[1]+s+m[3];
+    if(t<1) el._raf=requestAnimationFrame(step); else {el.textContent=text}
+  };
+  el._raf=requestAnimationFrame(step); tweens[key]=to; el.dataset.raw=text;
+}
+
+function renderStats(r){
+  STATS.forEach(s=>{
+    tweenText($('st-'+s.id), s.v(r), s.id);
+    const [txt,cls]=s.s(r); const ss=$('ss-'+s.id); ss.querySelector('span').textContent=txt; ss.querySelector('i').className=cls==='ok'?'':cls;
+  });
+  tweenText($('l-arr'),money(r.arr),'l-arr'); tweenText($('l-cust'),int(r.cust),'l-cust');
+  tweenText($('l-cac'),money(r.cac),'l-cac'); $('l-pb').textContent=mo(r.payback);
+}
+
+function renderVerdict(r){
+  const top=[...CHANNELS].sort((a,b)=>r.byChannel[b.id].opps-r.byChannel[a.id].opps)[0];
+  const share=Math.round(state.mix[top.id]||0);
+  let v;
+  if(r.payback<12) v=`A <em>${money(r.budget)}</em> a month ${r.motion.name.toLowerCase()} program pays for itself in <em>${mo(r.payback)}</em>. ${top.name} is doing the heavy lifting on ${share}% of the budget.`;
+  else if(r.payback<24) v=`This reaches <em>${money(r.arr)}</em> ARR in a year with payback around <em>${mo(r.payback)}</em>. Workable, if the customers stay. ${top.name} earns its ${share}% share.`;
+  else if(isFinite(r.payback)) v=`At this win rate and cycle, <em>${money(r.budget)}</em> a month buys <em>${money(r.arr)}</em> ARR and a <em>${mo(r.payback)}</em> payback. Fix the funnel before you fund it.`;
+  else v=`Nothing closes inside twelve months at this sales cycle. Shorten the cycle or <em>plan for a longer runway</em>.`;
+  $('verdict').innerHTML=v;
+}
+
+/* Chart */
+const svg=$('chart'), tip=$('tip');
+let drawn=false;
+function renderChart(r){
+  const W=800,H=360,pl=56,pr=24,pt=24,pb=36;
+  const max=Math.max(r.pipe,r.arr,1)*1.08;
+  const x=i=>pl+(i/11)*(W-pl-pr), y=v=>pt+(1-v/max)*(H-pt-pb);
+  const pts=r.rows.map((row,i)=>[x(i),y(row.arr)]), ppts=r.rows.map((row,i)=>[x(i),y(row.pipe)]);
+  const line=p=>p.map((d,i)=>(i?'L':'M')+d[0].toFixed(1)+','+d[1].toFixed(1)).join(' ');
+  const area=line(pts)+` L${x(11).toFixed(1)},${y(0)} L${x(0)},${y(0)} Z`;
+  const ticks=4, grid=[];
+  for(let i=0;i<=ticks;i++){const v=max/1.08*i/ticks; grid.push(`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(238,240,238,.12)"/><text x="${pl-10}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="rgba(238,240,238,.55)" font-family="Archivo,sans-serif">${money(v)}</text>`)}
+  const mlabels=r.rows.map((row,i)=>`<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="11" fill="rgba(238,240,238,.55)" font-family="Archivo,sans-serif">M${row.m}</text>`).join('');
+  const last=pts[11];
+  svg.innerHTML=`
+    <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5C66FF" stop-opacity=".45"/><stop offset="1" stop-color="#5C66FF" stop-opacity="0"/></linearGradient></defs>
+    ${grid.join('')}${mlabels}
+    <path d="${area}" fill="url(#ag)"/>
+    <path id="pipe-line" d="${line(ppts)}" fill="none" stroke="rgba(238,240,238,.7)" stroke-width="1.5" stroke-dasharray="4 4"/>
+    <path id="arr-line" d="${line(pts)}" fill="none" stroke="#5C66FF" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${last[0]}" cy="${last[1]}" r="5" fill="#5C66FF" stroke="#121414" stroke-width="2"/>
+    <text x="${last[0]-10}" y="${last[1]-12}" text-anchor="end" font-size="13" font-weight="600" fill="#EDEFED" font-family="Archivo,sans-serif">${money(r.arr)} ARR</text>
+    <g id="hit">${r.rows.map((row,i)=>`<rect x="${x(i)-(W-pl-pr)/22}" y="${pt}" width="${(W-pl-pr)/11}" height="${H-pt-pb}" fill="transparent" data-i="${i}"/>`).join('')}</g>
+    <line id="xh" x1="0" x2="0" y1="${pt}" y2="${H-pb}" stroke="rgba(238,240,238,.4)" stroke-dasharray="2 3" opacity="0"/>`;
+  if(!drawn){
+    ['arr-line','pipe-line'].forEach(id=>{const p=svg.querySelector('#'+id), L=p.getTotalLength(); p.style.strokeDasharray=L+' '+L; p.style.strokeDashoffset=L; p.style.transition='stroke-dashoffset 1.6s cubic-bezier(.22,1,.36,1)'; requestAnimationFrame(()=>requestAnimationFrame(()=>{p.style.strokeDashoffset='0'}))});
+    svg.querySelector('#pipe-line').addEventListener('transitionend',()=>{svg.querySelector('#pipe-line').style.strokeDasharray='4 4'},{once:true});
+    drawn=true;
+  }
+  const hit=svg.querySelector('#hit'), xh=svg.querySelector('#xh');
+  hit.addEventListener('pointermove',e=>{
+    const i=+e.target.dataset.i; if(isNaN(i))return;
+    const row=r.rows[i], rect=svg.getBoundingClientRect(), sx=rect.width/W, sy=rect.height/H;
+    xh.setAttribute('x1',x(i)); xh.setAttribute('x2',x(i)); xh.setAttribute('opacity','1');
+    tip.style.left=(x(i)*sx)+'px'; tip.style.top=(y(row.arr)*sy)+'px'; tip.style.opacity='1';
+    tip.innerHTML=`<b>Month ${row.m}</b><br>ARR ${money(row.arr)} · ${int(row.cust)} customers<br>Pipeline ${money(row.pipe)} · ${int(row.opps)} opps this month`;
+  });
+  hit.addEventListener('pointerleave',()=>{tip.style.opacity='0';xh.setAttribute('opacity','0')});
+
+  $('months').innerHTML=`<div class="row h"><span>Mo</span><span>Opps</span><span>New logos</span><span>ARR</span></div>`+r.rows.map(row=>`<div class="row num"><span>${row.m}</span><span>${int(row.opps)}</span><span>${row.newCust<.5&&row.newCust>0?'<1':int(row.newCust)}</span><span>${money(row.arr)}</span></div>`).join('');
+}
+
+/* Playbook */
+const PLAYS={
+  outbound:[['Wk 1','Build the list.','500 accounts that match the ICP, enriched, deduped, owners assigned.'],['Wk 2','Write three sequences.','One per persona. Five touches each. Kill the one with the lowest reply rate by week six.'],['Wk 7','Add a second rep.','Only after the first is booking eight qualified meetings a month.']],
+  paid:[['Wk 1','Launch brand and competitor search.','Exact match only. Cap daily spend until CPL stabilises.'],['Wk 3','Retarget visitors with a comparison page.','It will outperform the homepage ad by a wide margin.'],['Wk 9','Cut anything above 2x target CPL.','Reallocate to the ad group with the best opportunity rate, not the best click rate.']],
+  content:[['Wk 1','Publish the comparison pages.','One per competitor. These rank in weeks, not quarters.'],['Wk 2','Ship the definitive guide.','The piece every buyer searches before they know your name. Update it monthly.'],['Wk 6','Start the weekly note.','One honest opinion a week. The list is the asset.']],
+  events:[['Wk 2','Book the two conferences that matter.','Sponsor nothing. Host the dinner.'],['Wk 5','Run the first customer dinner.','Eight guests, three customers, no slides.'],['Wk 10','Hold a field day in the biggest territory.','Pair it with outbound two weeks before.']],
+  partners:[['Wk 1','Shortlist ten partners by overlap.','Shared customers first, shared buyers second.'],['Wk 3','Sign the first three.','Co-marketing before co-selling. Give them the comparison page.'],['Wk 8','Launch the integration listing.','Marketplace traffic converts like a referral.']],
+  product:[['Wk 1','Instrument the activation moment.','Define it, measure it, show it on a wall.'],['Wk 2','Open the free tier.','Generous enough to get value, tight enough to hit the ceiling.'],['Wk 6','Route product signals to sales.','Usage threshold, seat growth, admin invites. One alert per account, weekly.']],
+};
+const MOTION_PLAYS={
+  pl:['Wk 1','Write the upgrade path.','Every free account should know exactly which action triggers the paid tier.'],
+  sl:['Wk 1','Write the discovery script.','Ten questions. A deal that cannot answer four of them is not a deal.'],
+  pt:['Wk 1','Draft the partner economics.','Rev share, lead registration, and who owns renewal. Settle it before the first intro.'],
+  cl:['Wk 1','Pick the one opinion you will be known for.','Say it in every piece for ninety days.'],
+};
+function renderPlaybook(r){
+  const ranked=[...CHANNELS].filter(c=>(state.mix[c.id]||0)>=8).sort((a,b)=>b.ramp-a.ramp||(state.mix[b.id]-state.mix[a.id]));
+  const items=[MOTION_PLAYS[state.motion]];
+  ranked.forEach(c=>PLAYS[c.id].forEach(p=>items.push(p)));
+  items.push(['Wk 12','Hold the mix review.',`Compare actual CPL and opportunity rate per channel against this model. Move budget toward anything beating plan, and cut anything twice over.`]);
+  const wk=s=>+s.replace('Wk ','');
+  const phases=[{t:'Lay down',s:'Weeks 1 to 4',f:w=>w<=4},{t:'Light up',s:'Weeks 5 to 8',f:w=>w>4&&w<=8},{t:'Lean in',s:'Weeks 9 to 13',f:w=>w>8}];
+  $('weeks').innerHTML=phases.map(ph=>{
+    const li=items.filter(i=>ph.f(wk(i[0]))).sort((a,b)=>wk(a[0])-wk(b[0]));
+    return `<div class="phase"><div class="ph"><b>${ph.t}</b><small>${ph.s}</small></div><ul>${li.map(i=>`<li><span>${i[0]}</span><div><b>${i[1]}</b> ${i[2]}</div></li>`).join('')}</ul></div>`;
+  }).join('');
+}
+
+/* Card */
+const canvas=$('card'), ctx=canvas.getContext('2d');
+function renderCard(r){
+  const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#121414'; ctx.fillRect(0,0,W,H);
+  // grid texture
+  ctx.strokeStyle='rgba(238,240,238,.06)'; ctx.lineWidth=1;
+  for(let i=0;i<W;i+=60){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke()}
+  ctx.fillStyle='#5C66FF'; ctx.beginPath(); ctx.arc(90,96,14,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#EDEFED'; ctx.font='800 40px "Bricolage Grotesque", Archivo, sans-serif'; ctx.fillText('Overture',122,110);
+  ctx.fillStyle='rgba(238,240,238,.55)'; ctx.font='600 22px Archivo, sans-serif'; ctx.letterSpacing='3px'; ctx.fillText('GO-TO-MARKET PLAN · 12 MONTHS',W-80-ctx.measureText('GO-TO-MARKET PLAN · 12 MONTHS').width,104); ctx.letterSpacing='0px';
+  ctx.fillStyle='#EDEFED'; ctx.font='700 118px "Bricolage Grotesque", Archivo, sans-serif';
+  wrap(ctx,`${r.motion.name} motion at ${money(r.budget)} a month.`,80,290,W-160,112);
+  const kpis=[['ARR, MONTH 12',money(r.arr)],['NEW CUSTOMERS',int(r.cust)],['BLENDED CAC',money(r.cac)],['PAYBACK',mo(r.payback)]];
+  kpis.forEach((k,i)=>{const x=80+i*(W-160)/4, y=760;
+    ctx.fillStyle='rgba(238,240,238,.5)'; ctx.font='600 20px Archivo, sans-serif'; ctx.letterSpacing='2px'; ctx.fillText(k[0],x,y); ctx.letterSpacing='0px';
+    ctx.fillStyle=i===0?'#5C66FF':'#EDEFED'; ctx.font='700 72px "Bricolage Grotesque", Archivo, sans-serif'; ctx.fillText(k[1],x,y+84);
+  });
+  // curve
+  const cx=80,cy=1300,cw=W-160,ch=330, max=Math.max(r.arr,r.pipe,1);
+  ctx.strokeStyle='rgba(238,240,238,.2)'; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+cw,cy); ctx.stroke();
+  const px=i=>cx+i/11*cw, py=v=>cy-v/max*ch;
+  ctx.beginPath(); r.rows.forEach((row,i)=>i?ctx.lineTo(px(i),py(row.pipe)):ctx.moveTo(px(i),py(row.pipe))); ctx.setLineDash([8,8]); ctx.strokeStyle='rgba(238,240,238,.6)'; ctx.lineWidth=3; ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); r.rows.forEach((row,i)=>i?ctx.lineTo(px(i),py(row.arr)):ctx.moveTo(px(i),py(row.arr))); ctx.lineTo(px(11),cy); ctx.lineTo(px(0),cy); ctx.closePath();
+  const g=ctx.createLinearGradient(0,cy-ch,0,cy); g.addColorStop(0,'rgba(92,102,255,.5)'); g.addColorStop(1,'rgba(92,102,255,0)'); ctx.fillStyle=g; ctx.fill();
+  ctx.beginPath(); r.rows.forEach((row,i)=>i?ctx.lineTo(px(i),py(row.arr)):ctx.moveTo(px(i),py(row.arr))); ctx.strokeStyle='#5C66FF'; ctx.lineWidth=6; ctx.lineJoin='round'; ctx.stroke();
+  ctx.fillStyle='rgba(238,240,238,.5)'; ctx.font='500 20px Archivo, sans-serif';
+  ctx.fillText('M1',cx,cy+34); ctx.fillText('M12',cx+cw-40,cy+34);
+  // mix line
+  const mix=[...CHANNELS].filter(c=>state.mix[c.id]>=1).sort((a,b)=>state.mix[b.id]-state.mix[a.id]).map(c=>`${c.name} ${Math.round(state.mix[c.id])}%`).join('  ·  ');
+  ctx.fillStyle='rgba(238,240,238,.4)'; ctx.font='500 20px Archivo, sans-serif'; ctx.letterSpacing='2px';
+  ctx.fillText('MIX',80,H-128); ctx.letterSpacing='0px';
+  ctx.fillStyle='rgba(238,240,238,.75)'; ctx.font='500 22px Archivo, sans-serif'; wrap(ctx,mix,150,H-128,W-230,30);
+  ctx.fillStyle='rgba(238,240,238,.4)'; ctx.font='500 20px Archivo, sans-serif';
+  const meta=`ACV ${money(r.acv)}  ·  Win rate ${Math.round(r.win*100)}%  ·  Sales cycle ${mo(r.cycle)}  ·  ${money(r.totalSpend)} over the year`;
+  ctx.fillText(meta,80,H-60);
+}
+function wrap(c,text,x,y,maxW,lh){
+  const words=text.split(' '); let line='';
+  for(const w of words){const t=line?line+' '+w:w; if(c.measureText(t).width>maxW&&line){c.fillText(line,x,y);line=w;y+=lh}else line=t}
+  c.fillText(line,x,y);
+}
+
+/* Brief */
+function brief(r){
+  const mix=[...CHANNELS].filter(c=>state.mix[c.id]>=1).sort((a,b)=>state.mix[b.id]-state.mix[a.id]).map(c=>`  ${c.name.padEnd(14)} ${Math.round(state.mix[c.id])}%`).join('\n');
+  return `OVERTURE — GTM PLAN
+Motion: ${r.motion.name}
+Budget: ${money(r.budget)} / month (${money(r.totalSpend)} over 12 months)
+ACV ${money(r.acv)} · Win rate ${Math.round(r.win*100)}% · Sales cycle ${mo(r.cycle)}
+
+12-MONTH READOUT
+  ARR at month 12     ${money(r.arr)}
+  Pipeline created    ${money(r.pipe)}
+  New customers       ${int(r.cust)} (+${int(r.inFlight)} still in cycle)
+  Blended CAC         ${money(r.cac)}
+  CAC payback         ${mo(r.payback)}
+
+CHANNEL MIX
+${mix}
+
+${$('verdict').textContent}`;
+}
+
+/* ---------- Update loop ---------- */
+let raf;
+function update(persist){
+  cancelAnimationFrame(raf);
+  raf=requestAnimationFrame(()=>{
+    const r=run(state);
+    renderStats(r); renderVerdict(r); renderChart(r); renderPlaybook(r); renderCard(r);
+    $('mix-note').textContent=`${money(r.budget)} a month across ${CHANNELS.filter(c=>state.mix[c.id]>=1).length} channels. Shares always total 100.`;
+    if(persist) save();
+  });
+}
+function save(){try{localStorage.setItem('overture.v1',JSON.stringify(state))}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem('overture.v1'));if(s&&s.mix&&s.motion)return s}catch(e){}return null}
+
+$('copy').addEventListener('click',()=>{
+  const t=brief(run(state));
+  const ok=()=>flash('Copied. Paste it anywhere.');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok).catch(()=>fallback(t))}else fallback(t);
+  function fallback(t){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');ok()}catch(e){flash('Select the text manually to copy.')}ta.remove()}
+});
+$('save').addEventListener('click',()=>{
+  try{
+    const a=document.createElement('a'); a.download='overture-plan.png'; a.href=canvas.toDataURL('image/png'); document.body.appendChild(a); a.click(); a.remove();
+    flash('Saved. If nothing downloaded, this viewer blocks saves; take a screenshot of the card instead.');
+  }catch(e){flash('Could not export the card here. Take a screenshot instead.')}
+});
+$('reset').addEventListener('click',()=>{
+  Object.assign(state,{motion:'sl',acv:520,budget:480,win:22,cycle:8,mix:{...MOTIONS[1].mix}});
+  Object.keys(dials).forEach(k=>{dials[k].el.value=state[k];renderDial(k)});
+  renderMotions(); renderMix(); update(true); flash('Back to the defaults.');
+});
+let toastT; function flash(s){$('toast').textContent=s;clearTimeout(toastT);toastT=setTimeout(()=>$('toast').textContent='',3500)}
+
+/* ---------- Ambient ---------- */
+const tapeEl=$('tape');
+const tapeItems=['Four inputs','One allocation','Twelve months of pipeline','Blended CAC','Payback in months','A ninety-day playbook','No account required','Runs in your browser'];
+tapeEl.innerHTML=[...tapeItems,...tapeItems].map(t=>`<span>${t}</span>`).join('');
+
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target)}}),{threshold:0,rootMargin:"0px 0px -8% 0px"});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+const live=$('live'), heroEl=document.querySelector('.hero'), shareEl=$('share');
+const lio=new IntersectionObserver(es=>es.forEach(e=>{
+  if(e.target===heroEl) live.classList.toggle('on',!e.isIntersecting&&!shareVisible);
+  if(e.target===shareEl){shareVisible=e.isIntersecting; live.classList.toggle('on',!e.isIntersecting&&!heroVisible)}
+  if(e.target===heroEl) heroVisible=e.isIntersecting;
+}),{threshold:.2});
+let shareVisible=false, heroVisible=true;
+lio.observe(heroEl); lio.observe(shareEl);
+
+const cur=document.querySelector('.cur');
+if(window.matchMedia('(hover:hover) and (pointer:fine)').matches){
+  let tx=0,ty=0,cx=0,cy=0;
+  window.addEventListener('pointermove',e=>{tx=e.clientX;ty=e.clientY},{passive:true});
+  (function loop(){cx+=(tx-cx)*.2;cy+=(ty-cy)*.2;cur.style.transform=`translate(${cx}px,${cy}px) translate(-50%,-50%)`;requestAnimationFrame(loop)})();
+  document.addEventListener('pointerover',e=>{cur.classList.toggle('big',!!e.target.closest('a,button,input,.motion'))});
+}
+
+/* Card tilt on hover */
+canvas.addEventListener('pointermove',e=>{const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;canvas.style.transform=`perspective(1200px) rotateY(${x*8}deg) rotateX(${-y*8}deg)`});
+canvas.addEventListener('pointerleave',()=>{canvas.style.transform=''});
+
+/* Boot */
+renderMotions(); renderMix(); update(false);
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>renderCard(run(state)));
+})();
+</script>
+</body>
+</html>
