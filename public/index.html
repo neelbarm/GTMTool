@@ -209,6 +209,20 @@ canvas#card{width:100%;height:auto;display:block;max-width:100%;border-radius:6p
 .badge-box code{font-family:var(--mono);font-size:.68rem;color:rgba(236,238,240,.7);background:rgba(236,238,240,.08);padding:6px 10px;border-radius:3px;word-break:break-all;max-width:100%}
 .badge-box .chip{color:var(--wall);box-shadow:inset 0 0 0 1px rgba(236,238,240,.3)}
 .badge-box .chip:hover{background:var(--tape);color:var(--tape-ink)}
+/* Variants */
+.variants{margin-top:18px;border-top:1px solid rgba(236,238,240,.15);padding-top:14px}
+.variants .vh{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.variants .vh .eyebrow{color:rgba(236,238,240,.6)}
+.variants .vh span{font-size:.85rem;color:rgba(236,238,240,.7)}
+.vlist{display:grid;gap:2px}
+.vrow{display:grid;grid-template-columns:28px 1fr auto auto;gap:14px;align-items:center;padding:10px 12px;background:rgba(236,238,240,.07);font-size:.9rem;position:relative}
+@media (max-width:560px){.vrow{grid-template-columns:28px 1fr;gap:6px 12px}.vrow .vs{grid-column:2}}
+.vrow .vk{font-family:var(--display);font-size:1.3rem;color:rgba(236,238,240,.45)}
+.vrow q{quotes:none;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.vrow .vs{font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:rgba(236,238,240,.6);white-space:nowrap}
+.vrow .vs b{font-family:var(--display);font-size:1.3rem;letter-spacing:.01em;color:var(--wall);margin-right:4px}
+.vrow.lead{box-shadow:inset 0 0 0 2px var(--tape)}
+.vrow.lead::after{content:"LEADING";position:absolute;top:-10px;right:10px;transform:skewX(-10deg);background:var(--tape);color:var(--tape-ink);font-family:var(--display);font-size:.7rem;letter-spacing:.1em;padding:1px 8px}
 .test{padding-block:clamp(40px,6vw,80px);border-top:1px solid var(--wall-line)}
 .test-head{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:end;margin-bottom:28px}
 @media (max-width:900px){.test-head{grid-template-columns:1fr}}
@@ -311,6 +325,7 @@ canvas#card{width:100%;height:auto;display:block;max-width:100%;border-radius:6p
       <div class="checks" id="checks"></div>
       <div class="index-line" id="index-line"><span id="pct-text">Connecting to the index…</span><button class="btn" id="submit" type="button"><span>Add to the index</span></button></div>
       <div class="badge-box" id="badge-box" hidden><img id="badge-img" alt="Lineup badge" height="22"><code id="badge-md"></code><button class="chip" id="badge-copy" type="button">Copy markdown</button></div>
+      <div class="variants" id="variants" hidden><div class="vh"><p class="eyebrow">Your variants · head to head</p><span id="v-note"></span></div><div class="vlist" id="vlist"></div></div>
     </div>
   </div>
 </section>
@@ -566,15 +581,20 @@ function renderIndexLine(){
   const pct=n?Math.round(100*below/n):null;
   let txt=n?`More generic than <b>${pct}%</b> of the ${n} headlines in the index.`:'The index is empty. Yours would be the first.';
   const mine=store.mine&&entryOf(store.mine);
-  if(mine&&headlineOf(copyEl.value.trim())===mine.head){
-    txt+=` This one is in the index: shown ${mine.shows} times, picked ${mine.picks}${mine.rate!==null?` (${mine.rate}% pick rate)`:''}.`;
+  const myHead=headlineOf(copyEl.value.trim());
+  const match=mine&&(myHead===mine.head?mine:(store.variants||[]).find(v=>v.head===myHead));
+  if(match){
+    txt+=` This one is in the index: shown ${match.shows} times, picked ${match.picks}${match.rate!==null?` (${match.rate}% pick rate)`:''}.`;
     sub.disabled=true;sub.querySelector('span').textContent='In the index';
-    const url=location.origin+'/badge/'+mine.id+'.svg';$('badge-img').src=url+'?t='+Math.floor(Date.now()/60000);$('badge-md').textContent=`[![Lineup](${url})](${location.origin}/#e=${mine.id})`;bb.hidden=false;
-  } else {sub.disabled=false;sub.querySelector('span').textContent='Add to the index';bb.hidden=true}
+    const url=location.origin+'/badge/'+match.id+'.svg';$('badge-img').src=url+'?t='+Math.floor(Date.now()/60000);$('badge-md').textContent=`[![Lineup](${url})](${location.origin}/#e=${match.id})`;bb.hidden=false;
+  } else if(mine){sub.disabled=false;sub.querySelector('span').textContent='Add as a variant of yours';bb.hidden=true}
+  else {sub.disabled=false;sub.querySelector('span').textContent='Add to the index';bb.hidden=true}
   $('pct-text').innerHTML=txt;
+  renderVariants();
 }
 async function loadIndex(){
   try{const j=await api('/api/entries?limit=2000');store.entries=j.entries;store.counts={entries:j.total,votes:j.votes};store.on=true;
+    if(store.mine){try{const e=await api('/api/entries/'+store.mine);store.variants=e.variants||[]}catch(err){if(err.status===404){store.mine=null;store.variants=[];try{localStorage.removeItem('lineup.mine')}catch(x){}}}}
     renderIndexLine();renderBoard();if(store.round)renderJury();
     if(!loadIndex.lineupDone&&store.entries.length>=4){loadIndex.lineupDone=true;renderLineup()}
   }catch(e){offline('The index is unreachable right now.')}
@@ -583,8 +603,9 @@ async function submitEntry(){
   const text=copyEl.value.trim(),r=analyze(text);
   if(r.score===null){flash('toast2','Paste some copy first.');return}
   const btn=$('submit');btn.disabled=true;btn.querySelector('span').textContent='Adding…';
-  try{const j=await api('/api/entries',{method:'POST',body:JSON.stringify({text})});
-    store.mine=j.id;try{localStorage.setItem('lineup.mine',j.id)}catch(e){}
+  const variantOf=store.mine&&entryOf(store.mine)?store.mine:'';
+  try{const j=await api('/api/entries',{method:'POST',body:JSON.stringify(variantOf?{text,variantOf}:{text})});
+    if(!variantOf){store.mine=j.id;try{localStorage.setItem('lineup.mine',j.id)}catch(e){}}
     await loadIndex();
   }catch(e){btn.disabled=false;btn.querySelector('span').textContent='Add to the index';$('pct-text').textContent=e.message}
 }
@@ -614,6 +635,17 @@ async function pick(id){
   renderJury();
   try{await api('/api/votes',{method:'POST',body:JSON.stringify({ids:store.round.ids,pick:id,voter:store.voter})});await loadIndex();}
   catch(e){$('jury-note').textContent='Revealed. '+e.message}
+}
+function renderVariants(){
+  const box=$('variants'),vs=store.variants||[];
+  if(!store.on||vs.length<2){box.hidden=true;return}
+  box.hidden=false;
+  const MIN=10;const ready=vs.filter(v=>v.shows>=MIN);
+  let lead=null;
+  if(ready.length===vs.length){lead=vs.slice().sort((a,b)=>b.rate-a.rate||b.shows-a.shows)[0];const second=vs.filter(v=>v!==lead).sort((a,b)=>b.rate-a.rate)[0];if(second&&lead.rate===second.rate)lead=null}
+  const need=vs.reduce((a,v)=>a+Math.max(0,MIN-v.shows),0);
+  $('v-note').textContent=lead?`${lead.rate}% beats the field. Ship it, then test the next one.`:need?`${need} more showing${need===1?'':'s'} before this is called. Judging lineups below helps everyone's data, including yours.`:'A tie. Write a third one.';
+  $('vlist').innerHTML=vs.map((v,i)=>`<div class="vrow ${lead&&lead.id===v.id?'lead':''}"><span class="vk">${String.fromCharCode(65+i)}</span><q>${esc(v.head)}</q><span class="vs"><b>${v.rate===null?'—':v.rate+'%'}</b>pick · ${v.shows} shows</span><span class="vs"><b>${v.score}</b>sameness</span></div>`).join('');
 }
 function renderBoard(){
   const top=store.entries.filter(e=>e.shows>=3).sort((a,b)=>b.rate-a.rate||b.shows-a.shows).slice(0,5);

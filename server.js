@@ -35,14 +35,21 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS showings_entry ON showings (entry_id);
 `);
+if (!db.prepare("SELECT 1 FROM pragma_table_info('entries') WHERE name = 'grp'").get()) db.exec('ALTER TABLE entries ADD COLUMN grp TEXT');
+db.exec('CREATE INDEX IF NOT EXISTS entries_grp ON entries (grp)');
 
 const q = {
-  insertEntry: db.prepare('INSERT INTO entries (id,hash,text,head,score,covered,parts,created,seed) VALUES (?,?,?,?,?,?,?,?,?)'),
+  insertEntry: db.prepare('INSERT INTO entries (id,hash,text,head,score,covered,parts,created,seed,grp) VALUES (?,?,?,?,?,?,?,?,?,?)'),
+  groupOf: db.prepare('SELECT id, grp FROM entries WHERE id = ? AND hidden = 0'),
+  variants: db.prepare(`SELECT e.id, e.head, e.score, e.created,
+                     (SELECT COUNT(*) FROM showings s WHERE s.entry_id = e.id) AS shows,
+                     (SELECT COUNT(*) FROM showings s WHERE s.entry_id = e.id AND s.picked = 1) AS picks
+                     FROM entries e WHERE e.grp = ? AND e.hidden = 0 ORDER BY e.created`),
   byHash: db.prepare('SELECT id FROM entries WHERE hash = ?'),
   entry: db.prepare(`SELECT e.*, (SELECT COUNT(*) FROM showings s WHERE s.entry_id = e.id) AS shows,
                      (SELECT COUNT(*) FROM showings s WHERE s.entry_id = e.id AND s.picked = 1) AS picks
                      FROM entries e WHERE e.id = ? AND e.hidden = 0`),
-  entries: db.prepare(`SELECT e.id, e.head, e.score, e.covered, e.parts, e.created, e.seed,
+  entries: db.prepare(`SELECT e.id, e.head, e.score, e.covered, e.parts, e.created, e.seed, e.grp,
                      (SELECT COUNT(*) FROM showings s WHERE s.entry_id = e.id) AS shows,
                      (SELECT COUNT(*) FROM showings s WHERE s.entry_id = e.id AND s.picked = 1) AS picks
                      FROM entries e WHERE e.hidden = 0 ORDER BY e.created DESC LIMIT ?`),
@@ -87,10 +94,10 @@ function readJson(req, max = 8192) {
 function shape(row) {
   const shows = row.shows || 0, picks = row.picks || 0;
   return { id: row.id, head: row.head, text: row.text, score: row.score, covered: row.covered,
-    parts: JSON.parse(row.parts), created: row.created, seed: !!row.seed,
+    parts: JSON.parse(row.parts), created: row.created, seed: !!row.seed, group: row.grp || row.id,
     shows, picks, rate: shows ? Math.round((100 * picks) / shows) : null };
 }
-function addEntry(text, seed = false) {
+function addEntry(text, seed = false, variantOf = '') {
   const t = normalize(text);
   const r = model.analyze(t);
   if (r.score === null) return { error: 'Needs at least three words.' };
@@ -101,7 +108,9 @@ function addEntry(text, seed = false) {
   if (dup) return { id: dup.id, duplicate: true };
   const parts = {}; for (const k of Object.keys(r.parts)) parts[k] = r.parts[k].hit ? 2 : r.parts[k].part ? 1 : 0;
   const id = newId();
-  q.insertEntry.run(id, hash, t, model.headlineOf(t), r.score, r.covered, JSON.stringify(parts), Date.now(), seed ? 1 : 0);
+  let grp = id;
+  if (variantOf) { const base = q.groupOf.get(String(variantOf)); if (!base) return { error: 'The headline this is a variant of is not in the index.' }; grp = base.grp || base.id; }
+  q.insertEntry.run(id, hash, t, model.headlineOf(t), r.score, r.covered, JSON.stringify(parts), Date.now(), seed ? 1 : 0, grp);
   return { id, duplicate: false };
 }
 function recordVote({ ids, pick, voter }, iphash) {
@@ -117,12 +126,15 @@ function recordVote({ ids, pick, voter }, iphash) {
   return { ok: true };
 }
 function pickLineup(exclude, seen) {
-  const rows = q.entries.all(2000).filter((r) => r.id !== exclude);
+  const ex = exclude ? q.groupOf.get(exclude) : null; const exGrp = ex ? (ex.grp || ex.id) : null;
+  const rows = q.entries.all(2000).filter((r) => r.id !== exclude && (r.grp || r.id) !== exGrp);
   if (rows.length < 4) return null;
   const fresh = rows.filter((r) => !seen.has(r.id));
   const pool = (fresh.length >= 4 ? fresh : rows).slice();
   for (let i = pool.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [pool[i], pool[j]] = [pool[j], pool[i]]; }
-  return pool.slice(0, 4).map(shape);
+  const out = [], groups = new Set();
+  for (const r of pool) { const g = r.grp || r.id; if (groups.has(g)) continue; groups.add(g); out.push(r); if (out.length === 4) break; }
+  return out.length === 4 ? out.map(shape) : null;
 }
 function badge(entry) {
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -163,14 +175,17 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && p === '/api/entries') {
       if (rateLimited('e:' + iphash, 20, 3600000)) return send(res, 429, { error: 'Slow down. Twenty headlines an hour is plenty.' });
       const body = await readJson(req);
-      const out = addEntry(String(body.text || ''));
+      const out = addEntry(String(body.text || ''), false, body.variantOf ? String(body.variantOf) : '');
       if (out.error) return send(res, 400, out);
       return send(res, out.duplicate ? 200 : 201, { ...out, entry: shape(q.entry.get(out.id)) });
     }
     let m;
     if (req.method === 'GET' && (m = p.match(/^\/api\/entries\/([A-Za-z0-9_-]+)$/))) {
       const row = q.entry.get(m[1]);
-      return row ? send(res, 200, shape(row)) : send(res, 404, { error: 'Not in the index.' });
+      if (!row) return send(res, 404, { error: 'Not in the index.' });
+      const e = shape(row);
+      e.variants = q.variants.all(e.group).map((v) => ({ id: v.id, head: v.head, score: v.score, shows: v.shows, picks: v.picks, rate: v.shows ? Math.round((100 * v.picks) / v.shows) : null }));
+      return send(res, 200, e);
     }
     if (req.method === 'DELETE' && (m = p.match(/^\/api\/entries\/([A-Za-z0-9_-]+)$/))) {
       if (!ADMIN_TOKEN || req.headers.authorization !== 'Bearer ' + ADMIN_TOKEN) return send(res, 403, { error: 'Admin token required.' });

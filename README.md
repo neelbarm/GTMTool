@@ -24,6 +24,7 @@ Everyone complains about pipeline. Sameness is the thing upstream of it that nob
 | **The index** | Add your headline to a shared corpus. Your score comes back as a percentile against everyone before you. |
 | **The blind test** | Four real headlines from the index. Visitors pick the one they'd click. Each headline earns a buyer pick rate. |
 | **The board** | Most picked and most generic, live. |
+| **Variants** | Submit a second version of your headline. Both compete against the field in the blind test, never against each other in the same lineup, and the page calls a winner once each has ten showings. |
 | **Badges** | `/badge/:id.svg` shows a headline's sameness score and pick rate. Put it in a README or on a site. |
 | **Open data** | `/api/export.csv` downloads the whole index with scores, parts and pick rates. |
 | **The workbench** | Five plain-English slots assemble a specific headline and rescore it live. |
@@ -65,10 +66,10 @@ A `fly.toml` is included for Fly.io (`fly launch --copy-config`, create a volume
 | Method | Path | Notes |
 |---|---|---|
 | `GET` | `/api/entries?limit=1000` | The index without full text. Each entry: `id, head, score, covered, parts, shows, picks, rate`. |
-| `POST` | `/api/entries` | `{text}`. 12 to 400 characters. Returns `201` with the entry, or `200` with `duplicate: true`. 20 per hour per IP. |
-| `GET` | `/api/entries/:id` | One entry with full text and stats. |
+| `POST` | `/api/entries` | `{text, variantOf?}`. 12 to 400 characters. `variantOf` is an indexed entry id; the new entry joins its group. Returns `201` with the entry, or `200` with `duplicate: true`. 20 per hour per IP. |
+| `GET` | `/api/entries/:id` | One entry with full text, stats, and its `variants` (every entry in its group). |
 | `DELETE` | `/api/entries/:id` | Admin only. Hides the entry. |
-| `GET` | `/api/lineup?exclude=id&seen=id,id` | Four random entries, preferring ones the caller hasn't seen. |
+| `GET` | `/api/lineup?exclude=id&seen=id,id` | Four random entries from four different groups, preferring ones the caller hasn't seen. `exclude` removes that entry's whole group. |
 | `POST` | `/api/votes` | `{ids:[4], pick, voter}`. One vote per voter per set of four. 300 per hour per IP. |
 | `GET` | `/badge/:id.svg` | Badge. Green under 45, yellow to 69, red from 70. |
 | `GET` | `/api/export.csv` | Everything, for analysis. |
