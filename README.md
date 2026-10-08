@@ -51,7 +51,7 @@ The coach reads the ruler's findings (the tagged phrases and the missing parts),
 Needs Node 22.13 or newer (it uses the built-in SQLite). No npm install needed for the core. The only dependency, the Anthropic SDK, is optional and only for the coach.
 
 ```sh
-git clone https://github.com/neelbarm/lineup
+git clone https://github.com/neelbarm/GTMTool lineup
 cd lineup
 npm run seed     # 14 fictional composites so the blind test works on day one
 npm start        # http://localhost:3000
