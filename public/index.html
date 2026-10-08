@@ -180,6 +180,25 @@ textarea::placeholder{color:var(--ink-3)}
 .btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 .toast{font-family:var(--mono);font-size:.74rem;color:var(--ink-2);margin-top:10px;min-height:1.2em}
 
+/* Coach */
+.coach{margin-top:18px;border-top:1px solid var(--wall-line);padding-top:16px}
+.coach[hidden]{display:none}
+.coach .ch{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.coach .ch p{margin:0;font-size:.9rem;color:var(--ink-2);max-width:52ch}
+.coach .crit{font-size:1rem;line-height:1.45;margin:0 0 14px;padding:12px 14px;background:var(--wall);border-left:3px solid var(--tape);text-wrap:pretty}
+.coach .crit[hidden]{display:none}
+.rw{display:grid;gap:8px}
+.rw .r{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start;padding:14px;background:var(--wall);box-shadow:inset 0 0 0 1px var(--wall-line)}
+@media (max-width:560px){.rw .r{grid-template-columns:1fr}}
+.rw .r .ang{font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.rw .r .h{font-family:var(--display);font-size:1.4rem;line-height:1;text-transform:uppercase;letter-spacing:.005em;margin:0 0 6px;text-wrap:balance}
+.rw .r .s{font-size:.92rem;color:var(--ink-2);margin:0;line-height:1.4}
+.rw .r .sc{text-align:right;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.rw .r .sc b{font-family:var(--display);font-size:2.2rem;line-height:1}
+.rw .r .sc small{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.rw .r .sc .chip{white-space:nowrap}
+.coach .note{font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;color:var(--ink-3);margin-top:10px}
+
 /* Card */
 .cardsec{padding-block:0 clamp(48px,7vw,96px)}
 .cardwrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(16px,3vw,40px);align-items:center}
@@ -382,6 +401,12 @@ canvas#card{width:100%;height:auto;display:block;max-width:100%;border-radius:6p
           <button class="btn ghost" id="use-rewrite"><span>Test the rewrite as Exhibit A</span></button>
         </div>
         <div class="toast" id="toast" aria-live="polite"></div>
+        <div class="coach" id="coach" hidden>
+          <div class="ch"><p>Or let Claude read the evidence tags and draft three rewrites. Every draft is scored by the same ruler before you see it.</p><button class="btn" id="coach-go" type="button"><span>Draft three with Claude</span></button></div>
+          <p class="crit" id="coach-crit" hidden></p>
+          <div class="rw" id="coach-rw"></div>
+          <div class="note" id="coach-note"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -666,7 +691,21 @@ function renderLineup(){
   const items=[others[0],others[1],you||'Your headline goes here.',others[2],others[3]];
   lineup.innerHTML=items.map((t,i)=>`<div class="suspect ${i===2?'you':''}"><div class="no">${i+1}</div><q>${esc(t.length>140?t.slice(0,140)+'…':t)}</q></div>`).join('');
 }
+async function runCoach(){
+  const text=copyEl.value.trim();if(analyze(text).score===null){flash('toast','Paste some copy first.');return}
+  const b=$('coach-go');b.disabled=true;b.querySelector('span').textContent='Drafting…';$('coach-note').textContent='';
+  try{const j=await api('/api/coach',{method:'POST',body:JSON.stringify({text})});
+    $('coach-crit').textContent=j.critique;$('coach-crit').hidden=!j.critique;
+    const sl=j.slots||{};['who','alt','how','get','proof'].forEach(k=>{if(sl[k]&&!slotVal(k))$('s-'+k).value=sl[k]});renderDraft();
+    $('coach-rw').innerHTML=j.rewrites.map((r,i)=>`<div class="r"><div><div class="ang">${esc(r.angle||'rewrite '+(i+1))}</div><p class="h">${esc(r.headline)}</p><p class="s">${esc(r.subhead)}</p></div><div class="sc"><b>${r.score===null?'—':r.score}</b><small>sameness · was ${j.before}</small><button class="chip" type="button" data-i="${i}">Test as Exhibit A</button></div></div>`).join('');
+    $('coach-rw').querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{copyEl.value=j.rewrites[+btn.dataset.i].text;update();renderLineup();document.getElementById('room').scrollIntoView({behavior:'smooth'})}));
+    $('coach-note').textContent=`Drafted by ${j.model}. Bracketed [numbers] are yours to fill in; the coach never invents proof.`;
+  }catch(e){$('coach-note').textContent=e.message}
+  finally{b.disabled=false;b.querySelector('span').textContent='Draft three with Claude'}
+}
+$('coach-go').addEventListener('click',runCoach);
 async function connect(){
+  try{const h=await api('/api/health');$('coach').hidden=!h.coach}catch(e){}
   await loadIndex();
   if(store.on){await newRound();setInterval(loadIndex,25000)}
   const m=location.hash.match(/e=([A-Za-z0-9_-]+)/);

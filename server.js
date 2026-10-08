@@ -8,6 +8,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { DatabaseSync } = require('node:sqlite');
 const model = require('./lib/model.js');
+const coachMod = require('./lib/coach.js');
 
 const PORT = Number(process.env.PORT || 3000);
 const DATA_DIR = process.env.DATA_DIR || (process.env.VERCEL ? '/tmp/lineup-data' : path.join(__dirname, 'data'));
@@ -15,6 +16,8 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const SITE_URL = (process.env.SITE_URL || '').replace(/\/$/, '');
+const COACH_DAILY_CAP = Number(process.env.COACH_DAILY_CAP || 200);
+let coachDay = '', coachCount = 0;
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const db = new DatabaseSync(path.join(DATA_DIR, 'lineup.sqlite'));
@@ -191,7 +194,7 @@ const handler = async (req, res) => {
   try {
     if (req.method === 'GET' && (p === '/' || p === '/index.html')) return serveFile(res, path.join(PUBLIC_DIR, 'index.html'));
     if (req.method === 'GET' && p === '/model.js') return serveFile(res, path.join(__dirname, 'lib', 'model.js'));
-    if (req.method === 'GET' && p === '/api/health') return send(res, 200, { ok: true, ...q.counts.get() });
+    if (req.method === 'GET' && p === '/api/health') return send(res, 200, { ok: true, coach: coachMod.isEnabled(), ...q.counts.get() });
     if (req.method === 'GET' && p === '/api/stats') return send(res, 200, q.counts.get());
     if (req.method === 'GET' && p === '/api/entries') {
       const limit = Math.min(2000, Math.max(1, Number(url.searchParams.get('limit')) || 1000));
@@ -229,6 +232,18 @@ const handler = async (req, res) => {
       const out = recordVote(body, iphash);
       if (out.error) return send(res, 400, out);
       return send(res, 200, out);
+    }
+    if (req.method === 'POST' && p === '/api/coach') {
+      if (!coachMod.isEnabled()) return send(res, 503, { error: 'The coach is not enabled on this instance. Set ANTHROPIC_API_KEY and install @anthropic-ai/sdk.' });
+      const today = new Date().toISOString().slice(0, 10);
+      if (today !== coachDay) { coachDay = today; coachCount = 0; }
+      if (coachCount >= COACH_DAILY_CAP) return send(res, 429, { error: 'The coach has hit its daily budget on this instance. Try tomorrow, or run your own.' });
+      if (rateLimited('c:' + iphash, 10, 3600000)) return send(res, 429, { error: 'Ten coaching rounds an hour is plenty. Judge a few lineups while you wait.' });
+      const body = await readJson(req);
+      const text = normalize(String(body.text || ''));
+      if (text.length > 400) return send(res, 400, { error: 'Keep it under 400 characters.' });
+      try { coachCount++; return send(res, 200, await coachMod.coach(text)); }
+      catch (e) { return send(res, e.status || 502, { error: e.status ? e.message : 'The coach is unavailable right now.' }); }
     }
     if (req.method === 'GET' && (m = p.match(/^\/e\/([A-Za-z0-9_-]+)$/))) {
       const row = q.entry.get(m[1]);

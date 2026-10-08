@@ -29,9 +29,26 @@ Everyone complains about pipeline. Sameness is the thing upstream of it that nob
 | **Open data** | `/api/export.csv` downloads the whole index with scores, parts and pick rates. |
 | **The workbench** | Five plain-English slots assemble a specific headline and rescore it live. |
 
+## The coach (optional, needs a Claude API key)
+
+Everything above runs without any AI. If you want help rewriting, install the SDK and set a key, and a "Draft three with Claude" button appears in the workbench.
+
+```sh
+npm install          # pulls @anthropic-ai/sdk, the only optional dependency
+ANTHROPIC_API_KEY=sk-ant-... npm start
+```
+
+The coach reads the ruler's findings (the tagged phrases and the missing parts), writes a three-sentence critique, fills the five slots as far as the copy allows, and drafts three rewrites from three angles: buyer-first, alternative-first, outcome-first. Every draft is scored by the same deterministic model before it is shown, so the ruler stays the judge. It never invents numbers or customers; where the copy has no proof it leaves a bracketed placeholder for you to fill.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | unset | Enables the coach |
+| `COACH_MODEL` | `claude-opus-5-5` | Which Claude model drafts |
+| `COACH_DAILY_CAP` | `200` | Rounds per day on this instance, so a public deploy has a known ceiling. Ten per hour per IP on top. |
+
 ## Run it
 
-Needs Node 22.13 or newer (it uses the built-in SQLite). No npm install. No dependencies.
+Needs Node 22.13 or newer (it uses the built-in SQLite). No npm install needed for the core. The only dependency, the Anthropic SDK, is optional and only for the coach.
 
 ```sh
 git clone https://github.com/neelbarm/lineup
@@ -75,7 +92,8 @@ A `render.yaml` blueprint is included for Render (New, Blueprint, point it at th
 | `GET` | `/badge/:id.svg` | Badge. Green under 45, yellow to 69, red from 70. |
 | `GET` | `/e/:id` | Share page with Open Graph tags (score and pick rate in the title), redirects to the app. Paste this link on LinkedIn. |
 | `GET` | `/api/export.csv` | Everything, for analysis. |
-| `GET` | `/api/health` | `{ok, entries, votes}` |
+| `POST` | `/api/coach` | `{text}`. Returns a critique, the five slots, and three scored rewrites. `503` when no key is configured. |
+| `GET` | `/api/health` | `{ok, coach, entries, votes}` |
 
 ## How the score works
 
