@@ -616,7 +616,7 @@ async function newRound(){
   try{const j=await api('/api/lineup?exclude='+encodeURIComponent(store.mine||'')+'&seen='+encodeURIComponent([...store.seen].slice(-40).join(',')));
     if(!j.lineup){store.round=null;renderJury();return}
     j.lineup.forEach(e=>{store.seen.add(e.id);const i=store.entries.findIndex(x=>x.id===e.id);if(i>=0)store.entries[i]=Object.assign(store.entries[i],e)});
-    store.round={ids:j.lineup.map(e=>e.id),pick:null};renderJury();
+    store.round={ids:j.lineup.map(e=>e.id),token:j.token,pick:null};renderJury();
   }catch(e){$('jury-note').textContent=e.message}
   finally{nb.disabled=false}
 }
@@ -634,7 +634,7 @@ async function pick(id){
   if(!store.round||store.round.pick)return;
   store.round.pick=id;store.judged++;try{localStorage.setItem('lineup.judged',String(store.judged))}catch(e){}
   renderJury();
-  try{await api('/api/votes',{method:'POST',body:JSON.stringify({ids:store.round.ids,pick:id,voter:store.voter})});await loadIndex();}
+  try{await api('/api/votes',{method:'POST',body:JSON.stringify({token:store.round.token,pick:id,voter:store.voter})});await loadIndex();}
   catch(e){$('jury-note').textContent='Revealed. '+e.message}
 }
 function renderVariants(){

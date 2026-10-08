@@ -37,6 +37,12 @@ db.exec(`
 `);
 if (!db.prepare("SELECT 1 FROM pragma_table_info('entries') WHERE name = 'grp'").get()) db.exec('ALTER TABLE entries ADD COLUMN grp TEXT');
 db.exec('CREATE INDEX IF NOT EXISTS entries_grp ON entries (grp)');
+db.exec(`CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+  CREATE TABLE IF NOT EXISTS used_tokens (nonce TEXT PRIMARY KEY, created INTEGER NOT NULL)`);
+/* Lineups are signed so a vote can only be cast on a lineup the server actually served, once. */
+let SECRET = process.env.LINEUP_SECRET || (db.prepare("SELECT v FROM meta WHERE k = 'secret'").get() || {}).v;
+if (!SECRET) { SECRET = crypto.randomBytes(32).toString('hex'); db.prepare("INSERT INTO meta (k, v) VALUES ('secret', ?)").run(SECRET); }
+setInterval(() => db.prepare('DELETE FROM used_tokens WHERE created < ?').run(Date.now() - 7200000), 600000).unref();
 
 const q = {
   insertEntry: db.prepare('INSERT INTO entries (id,hash,text,head,score,covered,parts,created,seed,grp) VALUES (?,?,?,?,?,?,?,?,?,?)'),
@@ -68,6 +74,19 @@ const q = {
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const newId = () => crypto.randomBytes(6).toString('base64url');
 const normalize = (t) => t.replace(/\s+/g, ' ').trim();
+const TOKEN_TTL = 3600000;
+function signLineup(ids) {
+  const body = Buffer.from(JSON.stringify({ ids, exp: Date.now() + TOKEN_TTL, n: crypto.randomBytes(8).toString('base64url') })).toString('base64url');
+  return body + '.' + crypto.createHmac('sha256', SECRET).update(body).digest('base64url');
+}
+function verifyLineup(token) {
+  if (typeof token !== 'string' || token.length > 600) return null;
+  const [body, sig] = token.split('.');
+  if (!body || !sig) return null;
+  const want = crypto.createHmac('sha256', SECRET).update(body).digest('base64url');
+  if (sig.length !== want.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(want))) return null;
+  try { const d = JSON.parse(Buffer.from(body, 'base64url').toString()); return d.exp > Date.now() && Array.isArray(d.ids) ? d : null; } catch (e) { return null; }
+}
 const ipOf = (req) => (TRUST_PROXY && req.headers['x-forwarded-for'] ? String(req.headers['x-forwarded-for']).split(',')[0].trim() : req.socket.remoteAddress || '');
 const limits = new Map();
 function rateLimited(key, max, windowMs) {
@@ -115,12 +134,17 @@ function addEntry(text, seed = false, variantOf = '') {
   q.insertEntry.run(id, hash, t, model.headlineOf(t), r.score, r.covered, JSON.stringify(parts), Date.now(), seed ? 1 : 0, grp);
   return { id, duplicate: false };
 }
-function recordVote({ ids, pick, voter }, iphash) {
+function recordVote({ token, pick, voter }, iphash) {
+  const t = verifyLineup(token);
+  if (!t) return { error: 'This lineup has expired. Load a new one.' };
+  const ids = t.ids;
   if (!Array.isArray(ids) || ids.length !== 4 || new Set(ids).size !== 4) return { error: 'A lineup has four distinct headlines.' };
   if (!ids.includes(pick)) return { error: 'Pick one of the four.' };
   if (!/^[A-Za-z0-9_-]{8,64}$/.test(String(voter || ''))) return { error: 'Missing voter id.' };
   for (const id of ids) { if (!/^[A-Za-z0-9_-]{4,24}$/.test(id) || !q.exists.get(id)) return { error: 'Unknown headline in lineup.' }; }
   const setkey = ids.slice().sort().join('|');
+  try { db.prepare('INSERT INTO used_tokens (nonce, created) VALUES (?, ?)').run(t.n, Date.now()); }
+  catch (e) { return { duplicate: true }; }
   let voteId;
   try { voteId = Number(q.insertVote.run(voter, setkey, pick, Date.now(), iphash).lastInsertRowid); }
   catch (e) { return { duplicate: true }; }
@@ -195,8 +219,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && p === '/api/lineup') {
       const seen = new Set(String(url.searchParams.get('seen') || '').split(',').filter(Boolean));
+      if (rateLimited('l:' + iphash, 600, 3600000)) return send(res, 429, { error: 'Too many lineups. Take a break.' });
       const four = pickLineup(url.searchParams.get('exclude') || '', seen);
-      return four ? send(res, 200, { lineup: four }) : send(res, 200, { lineup: null, need: 4 - q.counts.get().entries });
+      return four ? send(res, 200, { lineup: four, token: signLineup(four.map((e) => e.id)) }) : send(res, 200, { lineup: null, need: 4 - q.counts.get().entries });
     }
     if (req.method === 'POST' && p === '/api/votes') {
       if (rateLimited('v:' + iphash, 300, 3600000)) return send(res, 429, { error: 'That is a lot of judging. Take a break.' });
@@ -242,7 +267,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-module.exports = { server, db, addEntry, recordVote, pickLineup, shape, badge };
+module.exports = { server, db, addEntry, recordVote, pickLineup, shape, badge, signLineup, verifyLineup };
 if (require.main === module) {
   server.listen(PORT, () => console.log(`Lineup listening on http://localhost:${PORT}  (data: ${DATA_DIR})`));
 }

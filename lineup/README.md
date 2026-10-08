@@ -60,6 +60,7 @@ A `render.yaml` blueprint is included for Render (New, Blueprint, point it at th
 | `DATA_DIR` | `./data` | Where the SQLite file lives |
 | `ADMIN_TOKEN` | unset | Enables `DELETE /api/entries/:id` with `Authorization: Bearer <token>` to hide spam |
 | `TRUST_PROXY` | `0` | Set to `1` behind a reverse proxy so rate limits key on `X-Forwarded-For` |
+| `LINEUP_SECRET` | generated | Signs lineup tokens. Generated once and stored in the database if unset. |
 
 ## API
 
@@ -69,8 +70,8 @@ A `render.yaml` blueprint is included for Render (New, Blueprint, point it at th
 | `POST` | `/api/entries` | `{text, variantOf?}`. 12 to 400 characters. `variantOf` is an indexed entry id; the new entry joins its group. Returns `201` with the entry, or `200` with `duplicate: true`. 20 per hour per IP. |
 | `GET` | `/api/entries/:id` | One entry with full text, stats, and its `variants` (every entry in its group). |
 | `DELETE` | `/api/entries/:id` | Admin only. Hides the entry. |
-| `GET` | `/api/lineup?exclude=id&seen=id,id` | Four random entries from four different groups, preferring ones the caller hasn't seen. `exclude` removes that entry's whole group. |
-| `POST` | `/api/votes` | `{ids:[4], pick, voter}`. One vote per voter per set of four. 300 per hour per IP. |
+| `GET` | `/api/lineup?exclude=id&seen=id,id` | Four random entries from four different groups, preferring ones the caller hasn't seen, plus a signed single-use `token` good for an hour. `exclude` removes that entry's whole group. |
+| `POST` | `/api/votes` | `{token, pick, voter}`. The token must come from `/api/lineup`, so a vote can only be cast on a lineup the server served, once. One vote per voter per set of four. 300 per hour per IP. |
 | `GET` | `/badge/:id.svg` | Badge. Green under 45, yellow to 69, red from 70. |
 | `GET` | `/e/:id` | Share page with Open Graph tags (score and pick rate in the title), redirects to the app. Paste this link on LinkedIn. |
 | `GET` | `/api/export.csv` | Everything, for analysis. |
