@@ -7,7 +7,7 @@ const path = require('node:path');
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'lineup-test-'));
 process.env.ADMIN_TOKEN = 'secret';
-const { server, addEntry } = require('../server.js');
+const { server, addEntry, signLineup, verifyLineup } = require('../server.js');
 
 let base;
 test.before(async () => { await new Promise((r) => server.listen(0, r)); base = `http://127.0.0.1:${server.address().port}`; });
@@ -44,12 +44,16 @@ test('lineup needs four entries, then votes count', async () => {
   r = await (await fetch(base + '/api/lineup')).json();
   assert.equal(r.lineup.length, 4);
   const ids = r.lineup.map((e) => e.id);
-  const v = await post('/api/votes', { ids, pick: ids[1], voter: 'voter-abc-12345' });
+  const v = await post('/api/votes', { token: r.token, pick: ids[1], voter: 'voter-abc-12345' });
   assert.equal(v.status, 200);
-  const again = await post('/api/votes', { ids, pick: ids[2], voter: 'voter-abc-12345' });
-  assert.equal((await again.json()).duplicate, true, 'same voter, same set, counted once');
-  const bad = await post('/api/votes', { ids, pick: 'nope', voter: 'voter-abc-12345' });
+  const again = await post('/api/votes', { token: r.token, pick: ids[2], voter: 'voter-abc-12345' });
+  assert.equal((await again.json()).duplicate, true, 'a served lineup is voted on once');
+  const bad = await post('/api/votes', { token: r.token, pick: 'nope', voter: 'voter-abc-12345' });
   assert.equal(bad.status, 400);
+  const forged = await post('/api/votes', { token: r.token.slice(0, -4) + 'AAAA', pick: ids[1], voter: 'voter-xyz-12345' });
+  assert.equal(forged.status, 400, 'a tampered token is refused');
+  const noToken = await post('/api/votes', { ids, pick: ids[1], voter: 'voter-xyz-12345' });
+  assert.equal(noToken.status, 400, 'votes without a served lineup are refused');
   const e = await (await fetch(base + '/api/entries/' + ids[1])).json();
   assert.equal(e.shows, 1); assert.equal(e.picks, 1); assert.equal(e.rate, 100);
   const list = await (await fetch(base + '/api/entries')).json();
@@ -73,6 +77,13 @@ test('variants share a group, never share a lineup, and report together', async 
   const detail = await (await fetch(base + '/api/entries/' + a.id)).json();
   assert.equal(detail.variants.length, 2);
   assert.deepEqual(detail.variants.map((v) => v.id), [a.id, b.id]);
+});
+
+test('lineup tokens expire and verify', () => {
+  const t = signLineup(['a', 'b', 'c', 'd']);
+  assert.deepEqual(verifyLineup(t).ids, ['a', 'b', 'c', 'd']);
+  assert.equal(verifyLineup('garbage'), null);
+  assert.equal(verifyLineup(t + 'x'), null);
 });
 
 test('badge, export, and admin hide', async () => {
