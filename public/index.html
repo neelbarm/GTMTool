@@ -294,7 +294,7 @@ canvas#card{width:100%;height:auto;display:block;max-width:100%;border-radius:6p
       <div class="panel-h"><span>Exhibit A · your copy</span><span class="counter" id="count">0 words</span></div>
       <div class="panel-b">
         <div class="field">
-          <textarea id="copy" placeholder="Paste your homepage headline and subhead. Two or three sentences is enough." spellcheck="false"></textarea>
+          <textarea id="copy" aria-label="Your homepage headline and subhead" placeholder="Paste your homepage headline and subhead. Two or three sentences is enough." spellcheck="false"></textarea>
         </div>
         <div class="panel-h" style="padding:14px 0 10px;border-top:1px solid var(--wall-line);border-bottom:0;margin-top:14px"><span>Or test a composite</span></div>
         <div class="samples" id="samples"></div>
@@ -428,7 +428,7 @@ document.body.classList.add('js');
 requestAnimationFrame(()=>requestAnimationFrame(()=>document.body.classList.add('in')));
 const $=id=>document.getElementById(id);
 
-const {analyze,tokenize,NUMBER,headlineOf}=window.LineupModel;
+const {analyze,tokenize,NUMBER,headlineOf,wilson}=window.LineupModel;
 
 /* ---------- Composites (fictional) ---------- */
 const SAMPLES=[
@@ -586,7 +586,7 @@ function renderIndexLine(){
   if(match){
     txt+=` This one is in the index: shown ${match.shows} times, picked ${match.picks}${match.rate!==null?` (${match.rate}% pick rate)`:''}.`;
     sub.disabled=true;sub.querySelector('span').textContent='In the index';
-    const url=location.origin+'/badge/'+match.id+'.svg';$('badge-img').src=url+'?t='+Math.floor(Date.now()/60000);$('badge-md').textContent=`[![Lineup](${url})](${location.origin}/#e=${match.id})`;bb.hidden=false;
+    const url=location.origin+'/badge/'+match.id+'.svg';$('badge-img').src=url+'?t='+Math.floor(Date.now()/60000);$('badge-md').textContent=`[![Lineup](${url})](${location.origin}/e/${match.id})`;bb.hidden=false;
   } else if(mine){sub.disabled=false;sub.querySelector('span').textContent='Add as a variant of yours';bb.hidden=true}
   else {sub.disabled=false;sub.querySelector('span').textContent='Add to the index';bb.hidden=true}
   $('pct-text').innerHTML=txt;
@@ -642,14 +642,19 @@ function renderVariants(){
   box.hidden=false;
   const MIN=10;const ready=vs.filter(v=>v.shows>=MIN);
   let lead=null;
-  if(ready.length===vs.length){lead=vs.slice().sort((a,b)=>b.rate-a.rate||b.shows-a.shows)[0];const second=vs.filter(v=>v!==lead).sort((a,b)=>b.rate-a.rate)[0];if(second&&lead.rate===second.rate)lead=null}
+  let close=false;
+  if(ready.length===vs.length){
+    const w=vs.map(v=>Object.assign({ci:wilson(v.picks,v.shows)},v)).sort((a,b)=>b.ci.lo-a.ci.lo);
+    const first=w[0],second=w[1];
+    if(first.ci.lo>second.ci.p) lead=first; else close=true;
+  }
   const need=vs.reduce((a,v)=>a+Math.max(0,MIN-v.shows),0);
-  $('v-note').textContent=lead?`${lead.rate}% beats the field. Ship it, then test the next one.`:need?`${need} more showing${need===1?'':'s'} before this is called. Judging lineups below helps everyone's data, including yours.`:'A tie. Write a third one.';
+  $('v-note').textContent=lead?`${lead.rate}% pick rate, and the gap holds up statistically. Ship it, then test the next one.`:close?'Too close to call yet. Keep it running, or write a sharper third version.':`${need} more showing${need===1?'':'s'} before this can be called. Judging lineups below helps everyone's data, including yours.`;
   $('vlist').innerHTML=vs.map((v,i)=>`<div class="vrow ${lead&&lead.id===v.id?'lead':''}"><span class="vk">${String.fromCharCode(65+i)}</span><q>${esc(v.head)}</q><span class="vs"><b>${v.rate===null?'—':v.rate+'%'}</b>pick · ${v.shows} shows</span><span class="vs"><b>${v.score}</b>sameness</span></div>`).join('');
 }
 function renderBoard(){
-  const top=store.entries.filter(e=>e.shows>=3).sort((a,b)=>b.rate-a.rate||b.shows-a.shows).slice(0,5);
-  $('board-top').innerHTML=top.length?top.map((e,i)=>`<li><span class="rk">${i+1}</span><q>${esc(e.head)}</q><span class="st">${e.rate}%<small>${e.shows} shows</small></span></li>`).join(''):'<li class="empty">Needs at least three showings per headline. Judge a few lineups.</li>';
+  const top=store.entries.filter(e=>e.shows>=3).map(e=>Object.assign({lo:wilson(e.picks,e.shows).lo},e)).sort((a,b)=>b.lo-a.lo||b.shows-a.shows).slice(0,5);
+  $('board-top').innerHTML=top.length?top.map((e,i)=>`<li><span class="rk">${i+1}</span><q>${esc(e.head)}</q><span class="st">${e.rate}%<small>${e.shows} shows · ≥${Math.round(100*e.lo)}%</small></span></li>`).join(''):'<li class="empty">Needs at least three showings per headline. Judge a few lineups.</li>';
   const gen=store.entries.slice().sort((a,b)=>b.score-a.score).slice(0,5);
   $('board-generic').innerHTML=gen.length?gen.map((e,i)=>`<li><span class="rk">${i+1}</span><q>${esc(e.head)}</q><span class="st">${e.score}<small>/100</small></span></li>`).join(''):'<li class="empty">Nothing in the index yet.</li>';
 }

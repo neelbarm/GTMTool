@@ -23,7 +23,7 @@ Everyone complains about pipeline. Sameness is the thing upstream of it that nob
 | **The five parts** | Who it's for, what it replaces, why you, the outcome, the proof. Present, partial, or missing. |
 | **The index** | Add your headline to a shared corpus. Your score comes back as a percentile against everyone before you. |
 | **The blind test** | Four real headlines from the index. Visitors pick the one they'd click. Each headline earns a buyer pick rate. |
-| **The board** | Most picked and most generic, live. |
+| **The board** | Most picked and most generic, live. Pick rates are ranked by the lower bound of a Wilson interval, so one lucky showing never tops the board. |
 | **Variants** | Submit a second version of your headline. Both compete against the field in the blind test, never against each other in the same lineup, and the page calls a winner once each has ten showings. |
 | **Badges** | `/badge/:id.svg` shows a headline's sameness score and pick rate. Put it in a README or on a site. |
 | **Open data** | `/api/export.csv` downloads the whole index with scores, parts and pick rates. |
@@ -52,7 +52,7 @@ docker build -t lineup .
 docker run -p 3000:3000 -v lineup_data:/data -e ADMIN_TOKEN=change-me lineup
 ```
 
-A `fly.toml` is included for Fly.io (`fly launch --copy-config`, create a volume named `lineup_data`, `fly deploy`). Railway and Render work the same way with a persistent disk.
+A `render.yaml` blueprint is included for Render (New, Blueprint, point it at the repo), and a `fly.toml` for Fly.io (`fly launch --copy-config`, create a volume named `lineup_data`, `fly deploy`). Railway and Render work the same way with a persistent disk.
 
 | Variable | Default | What it does |
 |---|---|---|
@@ -72,6 +72,7 @@ A `fly.toml` is included for Fly.io (`fly launch --copy-config`, create a volume
 | `GET` | `/api/lineup?exclude=id&seen=id,id` | Four random entries from four different groups, preferring ones the caller hasn't seen. `exclude` removes that entry's whole group. |
 | `POST` | `/api/votes` | `{ids:[4], pick, voter}`. One vote per voter per set of four. 300 per hour per IP. |
 | `GET` | `/badge/:id.svg` | Badge. Green under 45, yellow to 69, red from 70. |
+| `GET` | `/e/:id` | Share page with Open Graph tags (score and pick rate in the title), redirects to the app. Paste this link on LinkedIn. |
 | `GET` | `/api/export.csv` | Everything, for analysis. |
 | `GET` | `/api/health` | `{ok, entries, votes}` |
 
@@ -81,15 +82,15 @@ The model is one file, `lib/model.js`, used by both the page and the server so t
 
 1. **Lexicon match.** About 180 phrases that could sit on any B2B site, each weighted 0.3 to 1.0 by how empty it is. Longest match first, no overlaps.
 2. **Emptiness.** Weighted matched words over total words, raised to 0.6 and scaled to 60 points, so the first few empty phrases cost more than the last few.
-3. **Missing parts.** Ten points for each of the five parts that is missing, four if partial. Parts are detected by pattern: a named buyer, a named alternative, a concrete noun, an outcome with a number, proof with a number.
-4. **Specifics credit.** Up to 15 points back for numbers and concrete nouns.
+3. **Missing parts.** Ten points for each of the five parts that is missing, four if partial. A buyer counts as named when "for", "built for" or "helps" is followed by a phrase that could not describe every company: a proper noun, a number, an industry, a role, a trade, or a plural noun that is not on the generic list ("modern teams" and "businesses of all sizes" are not buyers). The other parts are detected by pattern: a named alternative, a concrete noun, an outcome with a number, proof with a number.
+4. **Specifics credit.** Up to 15 points back for numbers, concrete nouns and proper nouns. Without a single number the credit is capped at 4 and 6 points are added, because a claim with no number is one a buyer cannot check.
 5. Clamped to 0 to 100.
 
 It cannot tell whether a claim is true. It rewards a specific lie. Treat it as a linter, not a judge.
 
 ## Contributing
 
-The most valuable contributions are to the lexicon and the part detectors in `lib/model.js`. If you've seen a phrase on four different homepages, it belongs in the lexicon. If a real, specific headline scores badly, open an issue with the text and the score. Tests run with `npm test`; keep them green.
+The most valuable contributions are to the lexicon and the part detectors in `lib/model.js`. If you've seen a phrase on four different homepages, it belongs in the lexicon. If a real, specific headline scores badly, open an issue with the text and the score. Tests run with `npm test` and on every push through GitHub Actions. `test/golden.json` is a labelled set of forty fictional headlines; the model must keep every generic one above every specific one and each band inside its range. Change the model and the golden tests tell you what moved.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
