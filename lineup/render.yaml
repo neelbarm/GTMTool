@@ -1,0 +1,18 @@
+# Render blueprint. Click "New +" > "Blueprint" in Render and point it at this repo.
+services:
+  - type: web
+    name: lineup
+    runtime: docker
+    plan: starter
+    autoDeploy: true
+    disk:
+      name: lineup-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DATA_DIR
+        value: /data
+      - key: TRUST_PROXY
+        value: "1"
+      - key: ADMIN_TOKEN
+        generateValue: true

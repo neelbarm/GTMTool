@@ -1,0 +1,49 @@
+{
+  "_note": "Fictional headlines with hand-assigned bands. generic: a competitor could paste it. half: a real claim diluted by filler or missing most parts. specific: named buyer, concrete mechanism, numbers. The model must keep every generic above every specific, and bands inside their ranges.",
+  "generic": [
+    "The all-in-one platform that empowers modern teams to streamline workflows and unlock actionable insights.",
+    "Work smarter, not harder. The end-to-end solution for businesses of all sizes.",
+    "The intelligent platform that transforms the way you work.",
+    "Customer experience, reimagined. Delight your customers with seamless, personalized journeys.",
+    "Empower your people with the holistic HR platform for growing companies.",
+    "Unlock growth with AI-powered insights, all in one place.",
+    "The operating system for modern revenue teams. Close more deals, faster than ever.",
+    "Next-generation automation built for the future of work.",
+    "Your single source of truth. Seamless, scalable, secure.",
+    "Supercharge productivity with intelligent automation that just works.",
+    "The smartest way to run your business. Simple, powerful, intuitive.",
+    "Collaborate effortlessly. Deliver better outcomes. Stay ahead of the competition.",
+    "Mission control for high-performing teams everywhere.",
+    "Say hello to the new standard in customer engagement.",
+    "The data platform for modern teams. Centralized, scalable, and secure, with real-time visibility across your entire business."
+  ],
+  "half": [
+    "Payroll for restaurants. Run payroll, tips, and schedules in one place. Simple, powerful, built for hospitality.",
+    "Inventory for small breweries. Track kegs, taps, and deliveries without the spreadsheets.",
+    "Smarter scheduling for home care agencies. Fill shifts faster and keep caregivers happy.",
+    "The CRM built for real estate agents. Follow up with every lead, automatically.",
+    "Expense reports for field crews. Snap a receipt, done. No more lost paper.",
+    "Contract management for mid-market legal teams. Every clause, every renewal, one place.",
+    "Fleet maintenance for trucking companies. Catch problems before the road does.",
+    "A better way to onboard new hires. Checklists, documents, and intros that run themselves.",
+    "Secure file sharing for accounting firms. Clients upload, you review, nothing gets lost.",
+    "Appointment reminders for dental clinics. Fewer no-shows, happier front desks.",
+    "Timesheets for landscaping companies. Crews clock in from the truck.",
+    "Donor management for small nonprofits. Thank every gift the same day."
+  ],
+  "specific": [
+    "Chargeback recovery for Shopify stores doing over $1M a year. We win 71% of disputes. 1,400 stores, $38M recovered.",
+    "Invoice collection for freelance designers. We chase the late ones with polite, escalating emails. Clients paid 11 days sooner on average.",
+    "Scheduling for dental clinics with more than three chairs. Fill no-shows from a live waitlist by text, instead of a receptionist calling down a list. Clinics recover 14 empty slots a week.",
+    "Permit tracking for electrical contractors. Every inspection, every expiry, every job, on one wall calendar, instead of three spreadsheets. 220 contractors, zero lapsed permits last quarter.",
+    "Lease renewals for landlords with 5 to 50 units. We send the notice, collect the signature, and file it, 90 days out, every time. Replaces the sticky note on the fridge.",
+    "Interview scheduling for recruiting teams at 200-person companies. Candidates book themselves into panels across four calendars in one click. 83% fewer scheduling emails, measured across 60 teams.",
+    "Bookkeeping for Etsy sellers over $100k a year. We reconcile every payout against orders and fees, instead of you guessing at tax time. 900 shops, zero penalties.",
+    "Sales tax filing for Amazon sellers in 12 states. We pull the orders, file the returns, and pay the bill. 3,100 sellers, $0 in late fees since 2023.",
+    "Route planning for propane delivery fleets with 10 to 40 trucks. Cuts miles 18% versus dispatchers planning by hand. 140 fleets.",
+    "Patient intake for physical therapy clinics. Forms by text before the visit, instead of a clipboard in the lobby. 9 minutes saved per new patient, across 312 clinics.",
+    "Grant reporting for nonprofits under $5M. Every receipt tagged to a funder, instead of a 40-tab spreadsheet. 600 nonprofits, zero clawbacks.",
+    "Tip pooling for restaurants with 20 to 200 staff. Splits by hours and role, not by the manager's memory. 2,800 restaurants, $410M distributed.",
+    "Equipment rental quotes for construction contractors. A quote in 4 minutes instead of 2 days of phone calls. 1,100 contractors."
+  ]
+}

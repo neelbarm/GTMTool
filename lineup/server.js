@@ -103,6 +103,8 @@ function addEntry(text, seed = false, variantOf = '') {
   if (r.score === null) return { error: 'Needs at least three words.' };
   if (t.length < 12) return { error: 'Too short to score.' };
   if (t.length > 400) return { error: 'Keep it under 400 characters. A headline and a subhead is enough.' };
+  if (/https?:\/\/|www\.|[\w.-]+@[\w-]+\.[a-z]{2,}/i.test(t)) return { error: 'No links or email addresses. Just the words a buyer would read.' };
+  if (/[A-Z]{12,}/.test(t)) return { error: 'Easy on the caps lock.' };
   const hash = sha(t.toLowerCase());
   const dup = q.byHash.get(hash);
   if (dup) return { id: dup.id, duplicate: true };
@@ -202,6 +204,20 @@ const server = http.createServer(async (req, res) => {
       const out = recordVote(body, iphash);
       if (out.error) return send(res, 400, out);
       return send(res, 200, out);
+    }
+    if (req.method === 'GET' && (m = p.match(/^\/e\/([A-Za-z0-9_-]+)$/))) {
+      const row = q.entry.get(m[1]);
+      if (!row) return send(res, 404, 'Not found', 'text/plain');
+      const e = shape(row);
+      const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const title = `Sameness ${e.score}/100` + (e.rate === null ? '' : ` · picked by ${e.rate}% of buyers`);
+      const origin = SITE_URL || `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+      const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(title)} · Lineup</title>
+<meta property="og:type" content="website"><meta property="og:site_name" content="Lineup"><meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(e.head)}  —  Could a buyer pick you out of a lineup? Test your own homepage."><meta property="og:url" content="${esc(origin)}/e/${e.id}">
+<meta name="twitter:card" content="summary"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(e.head)}">
+<meta http-equiv="refresh" content="0; url=/#e=${e.id}"></head><body><p>${esc(e.head)}</p><p>${esc(title)}</p><p><a href="/#e=${e.id}">Open in Lineup</a></p></body></html>`;
+      return send(res, 200, html, 'text/html; charset=utf-8', { 'cache-control': 'public, max-age=300' });
     }
     if (req.method === 'GET' && (m = p.match(/^\/badge\/([A-Za-z0-9_-]+)\.svg$/))) {
       const row = q.entry.get(m[1]);
