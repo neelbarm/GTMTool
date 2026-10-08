@@ -1,0 +1,14 @@
+{
+  "name": "lineup",
+  "version": "1.0.0",
+  "description": "Could a buyer pick you out of a lineup? A sameness test for B2B homepage copy, with a live, crowd-judged index.",
+  "license": "MIT",
+  "private": true,
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node --no-warnings server.js",
+    "dev": "node --no-warnings --watch server.js",
+    "seed": "node --no-warnings scripts/seed.js",
+    "test": "node --no-warnings --test test/*.test.js"
+  }
+}

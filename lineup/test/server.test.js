@@ -1,0 +1,73 @@
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+
+process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'lineup-test-'));
+process.env.ADMIN_TOKEN = 'secret';
+const { server, addEntry } = require('../server.js');
+
+let base;
+test.before(async () => { await new Promise((r) => server.listen(0, r)); base = `http://127.0.0.1:${server.address().port}`; });
+test.after(() => { server.close(); fs.rmSync(process.env.DATA_DIR, { recursive: true, force: true }); });
+
+const post = (p, body, headers = {}) => fetch(base + p, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
+
+test('serves the page and the model', async () => {
+  const page = await fetch(base + '/');
+  assert.equal(page.status, 200);
+  assert.match(await page.text(), /Could a buyer/);
+  const m = await fetch(base + '/model.js');
+  assert.match(await m.text(), /LineupModel/);
+});
+
+test('adds entries, dedupes, rejects junk', async () => {
+  const a = await post('/api/entries', { text: 'Invoice collection for freelance designers. Clients paid 11 days sooner on average.' });
+  assert.equal(a.status, 201);
+  const ja = await a.json();
+  assert.ok(ja.id && ja.entry.score >= 0);
+  const b = await post('/api/entries', { text: 'invoice collection for freelance designers.  clients paid 11 days sooner on average.' });
+  assert.equal(b.status, 200);
+  assert.equal((await b.json()).duplicate, true);
+  const c = await post('/api/entries', { text: 'hi' });
+  assert.equal(c.status, 400);
+  const d = await post('/api/entries', { text: 'x '.repeat(300) });
+  assert.equal(d.status, 400);
+});
+
+test('lineup needs four entries, then votes count', async () => {
+  let r = await (await fetch(base + '/api/lineup')).json();
+  assert.equal(r.lineup, null);
+  for (const t of ['Payroll for restaurants. Tips and schedules in one place.', 'The all-in-one platform for modern teams.', 'Permit tracking for electrical contractors. 220 contractors.', 'Lease renewals for landlords with 5 to 50 units.']) addEntry(t);
+  r = await (await fetch(base + '/api/lineup')).json();
+  assert.equal(r.lineup.length, 4);
+  const ids = r.lineup.map((e) => e.id);
+  const v = await post('/api/votes', { ids, pick: ids[1], voter: 'voter-abc-12345' });
+  assert.equal(v.status, 200);
+  const again = await post('/api/votes', { ids, pick: ids[2], voter: 'voter-abc-12345' });
+  assert.equal((await again.json()).duplicate, true, 'same voter, same set, counted once');
+  const bad = await post('/api/votes', { ids, pick: 'nope', voter: 'voter-abc-12345' });
+  assert.equal(bad.status, 400);
+  const e = await (await fetch(base + '/api/entries/' + ids[1])).json();
+  assert.equal(e.shows, 1); assert.equal(e.picks, 1); assert.equal(e.rate, 100);
+  const list = await (await fetch(base + '/api/entries')).json();
+  assert.equal(list.votes, 1);
+  assert.ok(list.entries.every((x) => x.text === ''), 'list omits full text');
+});
+
+test('badge, export, and admin hide', async () => {
+  const list = await (await fetch(base + '/api/entries')).json();
+  const id = list.entries[0].id;
+  const b = await fetch(base + `/badge/${id}.svg`);
+  assert.equal(b.headers.get('content-type'), 'image/svg+xml');
+  assert.match(await b.text(), /sameness \d+/);
+  const csv = await (await fetch(base + '/api/export.csv')).text();
+  assert.match(csv.split('\n')[0], /^id,created,score/);
+  const noauth = await fetch(base + '/api/entries/' + id, { method: 'DELETE' });
+  assert.equal(noauth.status, 403);
+  const ok = await fetch(base + '/api/entries/' + id, { method: 'DELETE', headers: { authorization: 'Bearer secret' } });
+  assert.equal(ok.status, 200);
+  assert.equal((await fetch(base + '/api/entries/' + id)).status, 404);
+});
