@@ -57,6 +57,24 @@ test('lineup needs four entries, then votes count', async () => {
   assert.ok(list.entries.every((x) => x.text === ''), 'list omits full text');
 });
 
+test('variants share a group, never share a lineup, and report together', async () => {
+  const a = await (await post('/api/entries', { text: 'Scheduling for dental clinics. Fill no-shows from a live waitlist by text.' })).json();
+  const b = await (await post('/api/entries', { text: 'Dental clinics recover 14 empty slots a week. Waitlist by text, no receptionist calls.', variantOf: a.id })).json();
+  assert.equal(b.entry.group, a.id);
+  const bad = await post('/api/entries', { text: 'Some other headline for a different thing entirely.', variantOf: 'nope-nope' });
+  assert.equal(bad.status, 400);
+  for (let i = 0; i < 20; i++) {
+    const r = await (await fetch(base + '/api/lineup')).json();
+    const groups = r.lineup.map((e) => e.group);
+    assert.equal(new Set(groups).size, 4, 'four distinct groups per lineup');
+  }
+  const ex = await (await fetch(base + '/api/lineup?exclude=' + b.id)).json();
+  assert.ok(!ex.lineup.some((e) => e.id === a.id || e.id === b.id), 'excluding one variant excludes its siblings');
+  const detail = await (await fetch(base + '/api/entries/' + a.id)).json();
+  assert.equal(detail.variants.length, 2);
+  assert.deepEqual(detail.variants.map((v) => v.id), [a.id, b.id]);
+});
+
 test('badge, export, and admin hide', async () => {
   const list = await (await fetch(base + '/api/entries')).json();
   const id = list.entries[0].id;
