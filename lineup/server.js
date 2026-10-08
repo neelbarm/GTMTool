@@ -10,7 +10,7 @@ const { DatabaseSync } = require('node:sqlite');
 const model = require('./lib/model.js');
 
 const PORT = Number(process.env.PORT || 3000);
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const DATA_DIR = process.env.DATA_DIR || (process.env.VERCEL ? '/tmp/lineup-data' : path.join(__dirname, 'data'));
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -183,7 +183,7 @@ function serveFile(res, file) {
 }
 
 /* ---------- routes ---------- */
-const server = http.createServer(async (req, res) => {
+const handler = async (req, res) => {
   const url = new URL(req.url, 'http://x');
   const p = url.pathname;
   const ip = ipOf(req), iphash = sha('ip:' + ip).slice(0, 16);
@@ -265,9 +265,18 @@ const server = http.createServer(async (req, res) => {
   } catch (e) {
     send(res, e.message === 'too_large' || e.message === 'bad_json' ? 400 : 500, { error: e.message === 'bad_json' ? 'Bad JSON.' : e.message === 'too_large' ? 'Body too large.' : 'Server error.' });
   }
-});
+};
+const server = http.createServer(handler);
+/* Seed on an empty store when asked (serverless hosts start cold). */
+function seedIfEmpty() {
+  if (q.counts.get().entries > 0) return 0;
+  let n = 0;
+  try { for (const t of require('./scripts/seeds.json')) { const r = addEntry(t, true); if (!r.error && !r.duplicate) n++; } } catch (e) {}
+  return n;
+}
+if (process.env.SEED_ON_BOOT === '1' || process.env.VERCEL) seedIfEmpty();
 
-module.exports = { server, db, addEntry, recordVote, pickLineup, shape, badge, signLineup, verifyLineup };
+module.exports = { server, handler, db, addEntry, recordVote, pickLineup, shape, badge, signLineup, verifyLineup, seedIfEmpty };
 if (require.main === module) {
   server.listen(PORT, () => console.log(`Lineup listening on http://localhost:${PORT}  (data: ${DATA_DIR})`));
 }
