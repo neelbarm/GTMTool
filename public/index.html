@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lineup</title>
+<meta name="description" content="Paste your homepage headline. Find out whether a buyer could pick you out of a lineup. An open-source sameness test with a live, crowd-judged index.">
+<meta property="og:title" content="Lineup">
+<meta property="og:description" content="Could a buyer pick you out of a lineup? Score your homepage copy against a live index of real headlines judged by real people.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: an identification room. A height-marked wall runs the full page; the
+   copy under test stands in front of it, tagged with numbered evidence markers. */
+:root{
+  --wall:#E4E7EA;
+  --wall-2:#D5D9DD;
+  --wall-line:rgba(20,22,24,.16);
+  --ink:#141618;
+  --ink-2:#4B5157;
+  --ink-3:#868D94;
+  --card:#F6F7F8;
+  --tape:#F5C400;
+  --tape-ink:#141618;
+  --flag:#D7261E;
+  --ok:#1C7A4C;
+  --display:"Anton","Impact","Arial Narrow",sans-serif;
+  --body:"Instrument Sans","Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono","SFMono-Regular",Menlo,monospace;
+  --gutter:clamp(16px,4vw,64px);
+  --ease:cubic-bezier(.2,.9,.25,1);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --wall:#1A1D20; --wall-2:#15181A; --wall-line:rgba(230,233,236,.14); --ink:#ECEEF0; --ink-2:#B7BDC3; --ink-3:#737A81;
+    --card:#22262A; --tape:#F5C400; --tape-ink:#141618; --flag:#FF5A4F; --ok:#4FCB8A; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --wall:#1A1D20; --wall-2:#15181A; --wall-line:rgba(230,233,236,.14); --ink:#ECEEF0; --ink-2:#B7BDC3; --ink-3:#737A81;
+  --card:#22262A; --tape:#F5C400; --tape-ink:#141618; --flag:#FF5A4F; --ok:#4FCB8A; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--wall);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;overflow-x:hidden;
+  background-image:repeating-linear-gradient(to bottom,transparent 0 119px,var(--wall-line) 119px 120px);}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+textarea,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--tape);outline-offset:3px}
+::selection{background:var(--tape);color:var(--tape-ink)}
+.mono{font-family:var(--mono)}
+.wrap{padding-inline:var(--gutter);max-width:1280px;margin:0 auto}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+h1,h2,h3{margin:0;text-wrap:balance}
+.display{font-family:var(--display);font-weight:400;letter-spacing:.005em;line-height:.9;text-transform:uppercase}
+
+/* Top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--ink);color:var(--wall);display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px var(--gutter);font-family:var(--mono);font-size:.78rem;letter-spacing:.06em;text-transform:uppercase}
+.bar .logo{font-family:var(--display);font-size:1.4rem;letter-spacing:.04em;display:flex;align-items:center;gap:10px}
+.bar .logo i{width:22px;height:10px;background:var(--tape);display:inline-block;transform:skewX(-18deg)}
+.bar .case{display:flex;gap:18px;color:rgba(236,238,240,.7)}
+.bar .case b{color:var(--tape);font-weight:500}
+@media (max-width:640px){.bar .case span:not(:last-child){display:none}}
+
+/* Hero: the lineup */
+.hero{padding-block:clamp(40px,7vw,96px) clamp(24px,4vw,56px);display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:clamp(24px,5vw,80px);align-items:end}
+@media (max-width:900px){.hero{grid-template-columns:1fr}}
+.hero h1{font-size:clamp(3.2rem,7.6vw,7.6rem)}
+.hero h1 .l{display:block;overflow:hidden;padding-bottom:.06em;margin-bottom:-.06em}
+.hero h1 .l span{display:inline-block}
+body.js .hero h1 .l span{transform:translateY(105%)}
+body.js.in .hero h1 .l span{animation:up .9s var(--ease) forwards}
+.hero h1 .l:nth-child(2) span{animation-delay:.07s}.hero h1 .l:nth-child(3) span{animation-delay:.14s}
+@keyframes up{to{transform:none}}
+.hero h1 .tp{background:var(--tape);color:var(--tape-ink);padding:0 .12em;display:inline-block;transform:skewX(-6deg)}
+.hero h1 .tp span{display:inline-block;transform:skewX(6deg)}
+.hero p.lede{font-size:clamp(1.05rem,1.5vw,1.25rem);color:var(--ink-2);max-width:40ch;margin:22px 0 0;text-wrap:pretty}
+.stat-row{display:flex;gap:28px;flex-wrap:wrap;margin-top:28px;border-top:1px solid var(--wall-line);padding-top:16px}
+.stat-row div{display:flex;flex-direction:column;gap:2px}
+.stat-row b{font-family:var(--display);font-size:2.2rem;line-height:1}
+.stat-row small{font-size:.78rem;color:var(--ink-2);max-width:18ch;line-height:1.3}
+
+/* The lineup strip */
+.lineup{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;align-items:end;position:relative;padding-top:24px}
+.suspect{background:var(--card);box-shadow:inset 0 0 0 1px var(--wall-line);padding:14px 12px 12px;display:flex;flex-direction:column;gap:10px;min-height:150px;font-size:.78rem;line-height:1.3;color:var(--ink-2);position:relative;transform-origin:bottom;transition:transform .5s var(--ease)}
+body.js .suspect{transform:translateY(24px) scaleY(.96);opacity:0}
+body.js.in .suspect{animation:stand .7s var(--ease) forwards}
+.suspect:nth-child(1){animation-delay:.3s}.suspect:nth-child(2){animation-delay:.38s}.suspect:nth-child(3){animation-delay:.46s}.suspect:nth-child(4){animation-delay:.54s}.suspect:nth-child(5){animation-delay:.62s}
+@keyframes stand{to{transform:none;opacity:1}}
+.suspect .no{font-family:var(--display);font-size:1.6rem;line-height:1;color:var(--ink-3)}
+.suspect.you{box-shadow:inset 0 0 0 2px var(--ink);color:var(--ink);min-height:180px}
+.suspect.you .no{color:var(--ink)}
+.suspect.you::after{content:"YOU";position:absolute;top:-14px;left:50%;transform:translateX(-50%) skewX(-10deg);background:var(--tape);color:var(--tape-ink);font-family:var(--display);font-size:.8rem;letter-spacing:.1em;padding:2px 10px}
+.suspect q{quotes:none;display:block;flex:1}
+@media (max-width:640px){.lineup{grid-template-columns:repeat(3,minmax(0,1fr))}.suspect:nth-child(n+4):not(.you){display:none}}
+
+/* Panels */
+.panel{background:var(--card);box-shadow:0 1px 0 var(--wall-line),0 30px 60px -40px rgba(0,0,0,.5);border-radius:6px}
+.room{padding-block:clamp(24px,4vw,56px)}
+.room-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(16px,3vw,40px);align-items:start}
+@media (max-width:900px){.room-grid{grid-template-columns:1fr}}
+.panel-h{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--wall-line);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.panel-b{padding:18px}
+textarea{width:100%;min-height:150px;resize:vertical;border:0;background:transparent;padding:0;line-height:1.45;font-size:1.05rem;outline:none}
+textarea::placeholder{color:var(--ink-3)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.samples{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;padding:6px 10px;box-shadow:inset 0 0 0 1px var(--wall-line);border-radius:3px;transition:background .2s,color .2s}
+.chip:hover{background:var(--ink);color:var(--wall)}
+.counter{font-family:var(--mono);font-size:.72rem;color:var(--ink-3)}
+
+/* Evidence render */
+.evidence{font-size:clamp(1.15rem,2vw,1.55rem);line-height:1.4;font-weight:500;text-wrap:pretty;min-height:120px}
+.evidence mark{background:transparent;color:inherit;position:relative;box-shadow:inset 0 -.45em 0 var(--tape);padding:0 .08em;border-radius:2px;cursor:help;transition:box-shadow .2s}
+.evidence mark:hover{box-shadow:inset 0 -1.4em 0 var(--tape)}
+.evidence mark sup{font-family:var(--mono);font-size:.5em;color:var(--ink-2);margin-left:2px;vertical-align:super}
+.evidence mark.weak{box-shadow:inset 0 -.45em 0 color-mix(in srgb,var(--tape) 45%,transparent)}
+.evidence .good{box-shadow:inset 0 -2px 0 var(--ok);padding:0 .05em}
+.exhibits{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:8px;font-size:.86rem}
+.exhibits li{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:baseline;color:var(--ink-2)}
+.exhibits li b{font-family:var(--mono);font-weight:500;color:var(--ink);font-size:.72rem;letter-spacing:.06em}
+.exhibits li em{font-style:normal;color:var(--ink)}
+.exhibits li .tag{font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-left:6px}
+
+/* Verdict */
+.verdict{background:var(--ink);color:var(--wall);padding:clamp(28px,4vw,48px) var(--gutter);margin-top:clamp(24px,4vw,56px);position:relative;overflow:hidden}
+.verdict .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:clamp(24px,4vw,64px);align-items:center}
+@media (max-width:900px){.verdict .wrap{grid-template-columns:1fr}}
+.gauge{position:relative;display:flex;flex-direction:column;gap:6px}
+.gauge .big{font-family:var(--display);font-size:clamp(6rem,16vw,13rem);line-height:.85;color:var(--tape);font-variant-numeric:tabular-nums}
+.gauge .big small{font-size:.3em;color:rgba(236,238,240,.6);margin-left:.1em}
+.gauge .lbl{font-family:var(--mono);font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(236,238,240,.65)}
+.gauge .track{height:6px;background:rgba(236,238,240,.15);margin-top:14px;position:relative;border-radius:3px;overflow:hidden}
+.gauge .track i{position:absolute;left:0;top:0;bottom:0;background:var(--tape);width:0;transition:width 1s var(--ease)}
+.gauge .scale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:rgba(236,238,240,.45);margin-top:6px}
+.verdict h2{font-family:var(--display);font-size:clamp(1.9rem,4.4vw,3.6rem);line-height:.98;text-transform:uppercase}
+.verdict h2 em{font-style:normal;color:var(--tape)}
+.verdict p{color:rgba(236,238,240,.72);max-width:56ch;margin:14px 0 0;font-size:1.02rem;text-wrap:pretty}
+.checks{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;margin-top:22px}
+@media (max-width:640px){.checks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.chk{background:rgba(236,238,240,.07);padding:12px 12px 10px;display:flex;flex-direction:column;gap:6px;min-height:92px;border-top:3px solid rgba(236,238,240,.2);transition:border-color .4s}
+.chk.pass{border-top-color:var(--ok)}.chk.part{border-top-color:var(--tape)}.chk.fail{border-top-color:var(--flag)}
+.chk b{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;font-weight:500}
+.chk span{font-size:.8rem;color:rgba(236,238,240,.7);line-height:1.3}
+.chk i{font-style:normal;font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(236,238,240,.5)}
+.chk.pass i{color:var(--ok)}.chk.part i{color:var(--tape)}.chk.fail i{color:var(--flag)}
+
+/* Workbench */
+.bench{padding-block:clamp(40px,6vw,80px)}
+.bench-head{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:end;margin-bottom:28px}
+@media (max-width:900px){.bench-head{grid-template-columns:1fr}}
+.bench-head h2{font-size:clamp(2.4rem,6vw,5.4rem)}
+.bench-head p{color:var(--ink-2);max-width:48ch;margin:0;text-wrap:pretty}
+.bench-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:clamp(16px,3vw,40px);align-items:start}
+@media (max-width:900px){.bench-grid{grid-template-columns:1fr}}
+.slots{display:grid;gap:2px}
+.slot{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center;padding:14px 18px;background:var(--card)}
+@media (max-width:560px){.slot{grid-template-columns:1fr;gap:6px}}
+.slot label{font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);line-height:1.3}
+.slot label small{display:block;text-transform:none;letter-spacing:0;color:var(--ink-3);font-family:var(--body);font-size:.76rem}
+.slot input{width:100%;border:0;border-bottom:1px solid var(--wall-line);background:transparent;padding:6px 0;font-size:1rem;outline:none;transition:border-color .2s}
+.slot input:focus{border-bottom-color:var(--ink)}
+.draft{position:sticky;top:calc(64px + env(safe-area-inset-top,0px))}
+.draft .big{font-family:var(--display);font-size:clamp(1.8rem,3.6vw,3rem);line-height:1;text-transform:uppercase;letter-spacing:.005em;text-wrap:balance;min-height:2em}
+.draft .sub{font-size:1.05rem;color:var(--ink-2);margin-top:12px;text-wrap:pretty;line-height:1.45}
+.draft .cmp{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;margin-top:22px;padding-top:16px;border-top:1px solid var(--wall-line);font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.draft .cmp b{display:block;font-family:var(--display);font-size:2.6rem;line-height:1;color:var(--ink);letter-spacing:0}
+.draft .cmp .arrow{font-size:1.4rem;color:var(--ink-3)}
+.draft .cmp .delta{color:var(--ok)}
+.draft .cmp .delta.bad{color:var(--flag)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;background:var(--ink);color:var(--wall);font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;border-radius:3px;position:relative;overflow:hidden;transition:transform .3s var(--ease)}
+.btn::after{content:"";position:absolute;inset:0;background:var(--tape);transform:translateX(-101%) skewX(-12deg);transition:transform .35s var(--ease)}
+.btn span{position:relative;z-index:1}
+.btn:hover::after{transform:translateX(0) skewX(0)}
+.btn:hover{color:var(--tape-ink)}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.toast{font-family:var(--mono);font-size:.74rem;color:var(--ink-2);margin-top:10px;min-height:1.2em}
+
+/* Card */
+.cardsec{padding-block:0 clamp(48px,7vw,96px)}
+.cardwrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(16px,3vw,40px);align-items:center}
+@media (max-width:900px){.cardwrap{grid-template-columns:1fr}}
+canvas#card{width:100%;height:auto;display:block;max-width:100%;border-radius:6px;box-shadow:0 40px 80px -40px rgba(0,0,0,.6)}
+.cardcopy h2{font-size:clamp(2rem,5vw,4rem)}
+.cardcopy p{color:var(--ink-2);max-width:44ch}
+
+/* Method */
+.method{border-top:1px solid var(--wall-line);padding-block:clamp(32px,5vw,64px);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:clamp(16px,3vw,48px)}
+@media (max-width:900px){.method{grid-template-columns:1fr}}
+.method h2{font-size:clamp(1.8rem,4vw,3rem)}
+.method dl{margin:0;display:grid;gap:14px;font-size:.92rem;color:var(--ink-2);max-width:68ch}
+.method dt{font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+.method dd{margin:0}
+.method a{color:var(--ink)}
+.foot{padding-block:24px 40px;font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;color:var(--ink-3);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-top:1px solid var(--wall-line)}
+
+/* Index, blind test, board */
+.index-line{margin-top:18px;padding-top:14px;border-top:1px solid rgba(236,238,240,.15);display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:.92rem;color:rgba(236,238,240,.75)}
+.index-line b{color:var(--tape);font-family:var(--display);font-size:1.6rem;line-height:1;letter-spacing:.01em}
+.index-line .btn{background:var(--tape);color:var(--tape-ink)}
+.index-line .btn::after{background:var(--wall)}
+.index-line .btn:hover{color:var(--ink)}
+.index-line .btn[disabled]{opacity:.5;pointer-events:none}
+.badge-box{margin-top:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:.8rem}
+.badge-box code{font-family:var(--mono);font-size:.68rem;color:rgba(236,238,240,.7);background:rgba(236,238,240,.08);padding:6px 10px;border-radius:3px;word-break:break-all;max-width:100%}
+.badge-box .chip{color:var(--wall);box-shadow:inset 0 0 0 1px rgba(236,238,240,.3)}
+.badge-box .chip:hover{background:var(--tape);color:var(--tape-ink)}
+.test{padding-block:clamp(40px,6vw,80px);border-top:1px solid var(--wall-line)}
+.test-head{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:end;margin-bottom:28px}
+@media (max-width:900px){.test-head{grid-template-columns:1fr}}
+.test-head h2{font-size:clamp(2.2rem,4.6vw,4.4rem)}
+.test-head p{color:var(--ink-2);max-width:48ch;margin:0;text-wrap:pretty}
+.test-meta{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-top:10px}
+.jury{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-items:stretch}
+@media (max-width:900px){.jury{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.jury{grid-template-columns:1fr}}
+.cand{text-align:left;background:var(--card);box-shadow:inset 0 0 0 1px var(--wall-line);padding:18px 16px 16px;display:flex;flex-direction:column;gap:12px;min-height:220px;position:relative;transition:transform .35s var(--ease),box-shadow .25s;cursor:pointer}
+.cand:hover{transform:translateY(-4px);box-shadow:inset 0 0 0 2px var(--ink)}
+.cand .no{font-family:var(--display);font-size:1.6rem;line-height:1;color:var(--ink-3)}
+.cand q{quotes:none;display:block;flex:1;font-size:1rem;line-height:1.4;font-weight:500}
+.cand .rev{display:none;font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);border-top:1px solid var(--wall-line);padding-top:10px;line-height:1.6}
+.cand .rev b{color:var(--ink);font-family:var(--display);font-size:1.3rem;letter-spacing:.01em;margin-right:4px}
+.jury.revealed .cand{cursor:default;transform:none}
+.jury.revealed .cand .rev{display:block}
+.jury.revealed .cand.picked{box-shadow:inset 0 0 0 3px var(--tape)}
+.jury.revealed .cand.picked::after{content:"YOUR PICK";position:absolute;top:-12px;left:14px;transform:skewX(-10deg);background:var(--tape);color:var(--tape-ink);font-family:var(--display);font-size:.75rem;letter-spacing:.1em;padding:2px 10px}
+.jury.revealed .cand.mine::before{content:"YOURS";position:absolute;top:-12px;right:14px;transform:skewX(-10deg);background:var(--ink);color:var(--wall);font-family:var(--display);font-size:.75rem;letter-spacing:.1em;padding:2px 10px}
+.jury .cand.empty{justify-content:center;align-items:center;text-align:center;color:var(--ink-3);font-size:.9rem;cursor:default;box-shadow:inset 0 0 0 1px dashed var(--wall-line)}
+.jury .cand.empty:hover{transform:none;box-shadow:inset 0 0 0 1px var(--wall-line)}
+.test-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px}
+.board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(16px,3vw,40px);margin-top:clamp(28px,4vw,48px)}
+@media (max-width:900px){.board{grid-template-columns:1fr}}
+.board ol{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.board li{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;padding:12px 14px;background:var(--card);font-size:.9rem;line-height:1.35}
+.board li .rk{font-family:var(--display);font-size:1.3rem;color:var(--ink-3)}
+.board li .st{font-family:var(--display);font-size:1.5rem;letter-spacing:.01em;white-space:nowrap}
+.board li .st small{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;color:var(--ink-3);margin-left:6px;text-transform:uppercase}
+.board li q{quotes:none;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.board li.empty{display:block;padding:18px;color:var(--ink-3);font-size:.9rem;background:var(--card)}
+.offline{background:var(--card);box-shadow:inset 0 0 0 1px var(--wall-line);padding:18px;font-size:.92rem;color:var(--ink-2);max-width:70ch;text-wrap:pretty}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+  body.js .hero h1 .l span,body.js .suspect{transform:none;opacity:1}
+}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="logo"><i></i>Lineup</div>
+  <div class="case"><span>Index <b id="bar-n">—</b></span><span>Judgments <b id="bar-v">—</b></span><span><a href="https://github.com/neelbarm/lineup" style="color:inherit;text-decoration:none" id="gh">Open source</a></span><span>Case <b id="case-no">0001</b></span><span>Sameness <b id="bar-score">—</b></span><span>Status <b id="bar-status">Awaiting copy</b></span></div>
+</div>
+
+<header class="wrap hero">
+  <div>
+    <p class="eyebrow">A positioning test for B2B homepages</p>
+    <h1 class="display">
+      <span class="l"><span>Could a buyer</span></span>
+      <span class="l"><span>pick you out</span></span>
+      <span class="l"><span>of a <span class="tp"><span>lineup?</span></span></span></span>
+    </h1>
+    <p class="lede">Paste your headline and subhead. Lineup measures how much of it could sit on a competitor's site unchanged, marks every interchangeable phrase as evidence, and checks whether the five parts of a real position are present. Then it helps you write one that isn't, and puts yours in front of real people in a running blind test.</p>
+    <div class="stat-row">
+      <div><b>64%</b><small>of B2B buyers can't tell vendors apart from their websites</small></div>
+      <div><b>1.86<span style="font-size:.5em">/5</span></b><small>blind-test score matching copy to brand. Chance is 1.0</small></div>
+      <div><b>4%</b><small>of executives say their value proposition is strong and understood</small></div>
+    </div>
+  </div>
+  <div class="lineup" id="lineup" aria-label="Five homepage headlines in a row"></div>
+</header>
+
+<main>
+<section class="wrap room" id="room">
+  <div class="room-grid">
+    <div class="panel">
+      <div class="panel-h"><span>Exhibit A · your copy</span><span class="counter" id="count">0 words</span></div>
+      <div class="panel-b">
+        <div class="field">
+          <textarea id="copy" placeholder="Paste your homepage headline and subhead. Two or three sentences is enough." spellcheck="false"></textarea>
+        </div>
+        <div class="panel-h" style="padding:14px 0 10px;border-top:1px solid var(--wall-line);border-bottom:0;margin-top:14px"><span>Or test a composite</span></div>
+        <div class="samples" id="samples"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span>Exhibit B · marked up</span><span id="mark-count">—</span></div>
+      <div class="panel-b">
+        <div class="evidence" id="evidence"></div>
+        <ul class="exhibits" id="exhibits"></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="verdict" id="verdict">
+  <div class="wrap">
+    <div class="gauge">
+      <div class="lbl">Sameness index</div>
+      <div class="big"><span id="score">0</span><small>/100</small></div>
+      <div class="track"><i id="track"></i></div>
+      <div class="scale"><span>Unmistakable</span><span>Could be anyone</span></div>
+    </div>
+    <div>
+      <p class="eyebrow" style="color:rgba(236,238,240,.6)">The verdict</p>
+      <h2 id="v-head"></h2>
+      <p id="v-body"></p>
+      <div class="checks" id="checks"></div>
+      <div class="index-line" id="index-line"><span id="pct-text">Connecting to the index…</span><button class="btn" id="submit" type="button"><span>Add to the index</span></button></div>
+      <div class="badge-box" id="badge-box" hidden><img id="badge-img" alt="Lineup badge" height="22"><code id="badge-md"></code><button class="chip" id="badge-copy" type="button">Copy markdown</button></div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap test" id="test">
+  <div class="test-head">
+    <div>
+      <p class="eyebrow">The blind test</p>
+      <h2 class="display">Four real headlines. Which one would you click?</h2>
+      <div class="test-meta" id="test-meta">—</div>
+    </div>
+    <p>Every headline here was submitted by someone who tested it above. Pick the one you'd click, and it earns a buyer pick rate. That number can't be computed by any lexicon. It only exists because people keep judging.</p>
+  </div>
+  <div class="jury" id="jury"></div>
+  <div class="test-foot">
+    <span class="test-meta" id="jury-note"></span>
+    <button class="btn ghost" id="next-round" type="button"><span>Next lineup</span></button>
+  </div>
+  <div class="board">
+    <div>
+      <p class="eyebrow">Most picked · the ones buyers choose</p>
+      <ol id="board-top"><li class="empty">Needs a few judgments first.</li></ol>
+    </div>
+    <div>
+      <p class="eyebrow">Most generic · the sameness leaderboard</p>
+      <ol id="board-generic"><li class="empty">Nothing in the index yet.</li></ol>
+    </div>
+  </div>
+</section>
+
+<section class="wrap bench" id="bench">
+  <div class="bench-head">
+    <div>
+      <p class="eyebrow">The rewrite</p>
+      <h2 class="display">Fill five slots. Get a position.</h2>
+    </div>
+    <p>A position is a claim with five parts. Most homepages have one or two. Fill the slots in your own words and the draft assembles on the right, rescored against the same test as your original.</p>
+  </div>
+  <div class="bench-grid">
+    <div class="slots" id="slots"></div>
+    <div class="panel draft">
+      <div class="panel-h"><span>Exhibit C · the rewrite</span><span id="draft-words">—</span></div>
+      <div class="panel-b">
+        <div class="big" id="d-head">Fill the slots to see a draft.</div>
+        <div class="sub" id="d-sub"></div>
+        <div class="cmp">
+          <div>Original<b id="c-before">—</b></div>
+          <div class="arrow">&rarr;</div>
+          <div>Rewrite<b id="c-after">—</b><span class="delta" id="c-delta"></span></div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="copy-rewrite"><span>Copy rewrite</span></button>
+          <button class="btn ghost" id="use-rewrite"><span>Test the rewrite as Exhibit A</span></button>
+        </div>
+        <div class="toast" id="toast" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap cardsec" id="share">
+  <div class="cardwrap">
+    <canvas id="card" width="1200" height="1200" aria-label="Before and after card"></canvas>
+    <div class="cardcopy">
+      <p class="eyebrow">Exhibit D</p>
+      <h2 class="display">Before and after, on one card.</h2>
+      <p>The original with its evidence tags, the rewrite, and both scores. Screenshot it, post it, or send it to whoever owns the homepage.</p>
+      <div class="actions">
+        <button class="btn" id="copy-report"><span>Copy full report</span></button>
+        <button class="btn ghost" id="reset"><span>New case</span></button>
+      </div>
+      <div class="toast" id="toast2" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap method" id="method">
+  <div><p class="eyebrow">How it scores</p><h2 class="display">No model. A ruler.</h2></div>
+  <dl>
+    <dt>Sameness index</dt>
+    <dd>The share of your copy covered by phrases drawn from a lexicon of interchangeable B2B language, weighted by how empty each phrase is, minus credit for specifics: numbers, named buyers, named alternatives, and concrete nouns. 0 means every phrase is doing work only you could claim. 100 means a competitor could paste it in without edits.</dd>
+    <dt>The five parts</dt>
+    <dd>Who it is for, what it replaces, why it is different, what the buyer gets, and the proof. Each is detected by pattern, so a sentence that names a buyer, an alternative, or a number passes. The method follows the positioning framework that April Dunford describes in Obviously Awesome.</dd>
+    <dt>The numbers in the header</dt>
+    <dd>From Wynter's June 2026 differentiation survey of B2B buyers (64% find vendors hard to tell apart; blind match score 1.86 of 5) and Bain's research on value propositions (4% of executives). Both are vendor-run studies with modest samples. The direction is consistent with TrustRadius's 2022 finding that unclear messaging is a top-three reason buyers walk.</dd>
+    <dt>Open code, open data</dt>
+    <dd>The scoring model, the server, and the page are MIT licensed. The index is downloadable as CSV from the footer. If you quote a number from it, link back so the next person can check it.</dd>
+    <dt>What it cannot do</dt>
+    <dd>It cannot tell whether a specific claim is true, and it will reward a specific lie. Treat it as a linter, not a judge. Scoring runs in your browser. Nothing leaves the page unless you add it to the index.</dd>
+  </dl>
+</section>
+<footer class="wrap foot"><span>Lineup · open source under MIT · <a href="https://github.com/neelbarm/lineup" style="color:inherit">source</a> · <a href="/api/export.csv" style="color:inherit">download the index as CSV</a></span><span>Seed composites are fictional. Everything else was submitted by a person.</span></footer>
+</main>
+
+<script src="/model.js"></script>
+<script>
+(function(){
+'use strict';
+document.body.classList.add('js');
+requestAnimationFrame(()=>requestAnimationFrame(()=>document.body.classList.add('in')));
+const $=id=>document.getElementById(id);
+
+const {analyze,tokenize,NUMBER,headlineOf}=window.LineupModel;
+
+/* ---------- Composites (fictional) ---------- */
+const SAMPLES=[
+  {n:'Typical SaaS', t:'The all-in-one platform that empowers modern teams to streamline workflows, unlock actionable insights, and drive growth at scale. Seamlessly collaborate in one place with AI-powered automation built for the future of work.'},
+  {n:'AI-era', t:'Meet your AI copilot for revenue. Supercharge your sales team with intelligent automation and real-time insights that help you close more deals, faster than ever. Trusted by high-performing teams everywhere.'},
+  {n:'Half there', t:'Payroll for restaurants. Run payroll, tips, and schedules in one place, so managers spend less time on admin and more time on the floor. Simple, powerful, built for hospitality.'},
+  {n:'Specific', t:'Chargeback recovery for Shopify stores doing over $1M a year. We fight every dispute with order evidence your team never has time to assemble, and win 71% of them. Pay nothing unless we recover the money. 1,400 stores, $38M recovered.'},
+];
+const LINEUP=[
+  'The all-in-one platform to streamline your workflows and drive growth.',
+  'Empower your team with AI-powered insights, all in one place.',
+  'Work smarter. Unlock productivity for modern teams of all sizes.',
+  'The intelligent platform that transforms the way you work.',
+];
+
+/* ---------- Render: evidence ---------- */
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function renderEvidence(text,r){
+  const ev=$('evidence'), ex=$('exhibits');
+  if(!r.score&&r.score!==0){ev.innerHTML='<span style="color:var(--ink-3)">Your copy appears here with every interchangeable phrase tagged.</span>';ex.innerHTML='';$('mark-count').textContent='—';return}
+  let out='',pos=0;
+  r.marks.forEach((m,i)=>{out+=esc(text.slice(pos,m.i));out+=`<mark class="${m.w<.7?'weak':''}" title="Could appear on any competitor's site">${esc(m.ph)}<sup>${i+1}</sup></mark>`;pos=m.end});
+  out+=esc(text.slice(pos));
+  // underline specifics
+  out=out.replace(new RegExp('(?<![\\w>])('+NUMBER.source+')(?![^<]*>)','gi'),'<span class="good">$1</span>');
+  ev.innerHTML=out;
+  $('mark-count').textContent=`${r.marks.length} tagged · ${r.covered}% of words`;
+  const reasons=w=>w>=.9?'Interchangeable':w>=.7?'Vague':'Weak';
+  ex.innerHTML=r.marks.slice(0,12).map((m,i)=>`<li><b>${String(i+1).padStart(2,'0')}</b><div><em>${esc(m.ph)}</em><span class="tag">${reasons(m.w)}</span></div></li>`).join('')+(r.marks.length>12?`<li><b>…</b><div>${r.marks.length-12} more</div></li>`:'');
+}
+
+/* ---------- Render: verdict ---------- */
+let scoreFrom=0;
+function renderVerdict(r){
+  const s=r.score;
+  const chk=$('checks'), head=$('v-head'), body=$('v-body');
+  if(s===null){
+    $('score').textContent='0';$('track').style.width='0';$('bar-score').textContent='—';$('bar-status').textContent='Awaiting copy';
+    head.textContent='Nothing to identify yet.';body.textContent='Paste a headline and subhead, or pick a composite to see how the test reads.';chk.innerHTML='';return;
+  }
+  tween($('score'),scoreFrom,s);scoreFrom=s;
+  $('track').style.width=s+'%';
+  $('bar-score').textContent=s+'/100';
+  $('bar-status').textContent=s>=70?'Unidentifiable':s>=45?'Partial match':s>=25?'Mostly distinct':'Identified';
+  const miss=Object.values(r.parts).filter(p=>!p.hit).map(p=>p.t.toLowerCase());
+  if(s>=70){head.innerHTML=`<em>${r.covered}%</em> of this could be on a competitor's site tomorrow.`;body.textContent=`A buyer reading this learns the category and nothing else. There is no named buyer, no named alternative, and nothing they could check. Start by answering who this is for and what it replaces.`}
+  else if(s>=45){head.innerHTML=`Half a position. The buyer can see <em>what</em>, not <em>why you</em>.`;body.textContent=`There are specifics here, but the claim is still carried by phrases anyone could use. Missing: ${miss.join(', ')}. Replace the tagged words with the thing you actually do.`}
+  else if(s>=25){head.innerHTML=`Mostly distinct. A few tagged phrases are <em>diluting</em> a real claim.`;body.textContent=`The buyer could probably pick you out. Cut the tagged phrases, add ${miss.length?miss.join(' and ')+', ':''}and the headline will do the sales rep's job before the call.`}
+  else{head.innerHTML=`<em>Identified.</em> Nobody else could claim this.`;body.textContent=`Named buyer, named alternative, a concrete mechanism, and a number. This is the kind of copy a buyer remembers after closing the tab. Guard it from the next rebrand.`}
+  chk.innerHTML=Object.values(r.parts).map(p=>`<div class="chk ${p.hit?'pass':p.part?'part':'fail'}"><b>${p.t}</b><span>${p.q}</span><i>${p.hit?'Present':p.part?'Partial':'Missing'}</i></div>`).join('');
+}
+function tween(el,from,to){
+  const t0=performance.now(),d=700;cancelAnimationFrame(el._r);
+  const step=now=>{const t=Math.min(1,(now-t0)/d),e=1-Math.pow(1-t,3);el.textContent=Math.round(from+(to-from)*e);if(t<1)el._r=requestAnimationFrame(step)};
+  el._r=requestAnimationFrame(step);
+}
+
+/* ---------- Workbench ---------- */
+const SLOTS=[
+  {id:'who',  l:'Who it is for', s:'A buyer you could name in a room', ph:'Shopify stores doing over $1M a year'},
+  {id:'alt',  l:'Instead of', s:'What they use today', ph:'fighting chargebacks by hand, or writing them off'},
+  {id:'how',  l:'Because', s:'The concrete thing you do', ph:'we assemble the order evidence and file every dispute'},
+  {id:'get',  l:'So that', s:'The outcome, with a number', ph:'you win 71% of disputes instead of 20%'},
+  {id:'proof',l:'Proof', s:'Something they could check', ph:'1,400 stores, $38M recovered, pay only when we win'},
+  {id:'name', l:'Product', s:'Optional', ph:'Rebuttal'},
+];
+const slots=$('slots');
+SLOTS.forEach(s=>{const d=document.createElement('div');d.className='slot';d.innerHTML=`<label for="s-${s.id}">${s.l}<small>${s.s}</small></label><input id="s-${s.id}" placeholder="${esc(s.ph)}" autocomplete="off">`;slots.appendChild(d);d.querySelector('input').addEventListener('input',renderDraft)});
+function slotVal(id){return $('s-'+id).value.trim()}
+function composeDraft(){
+  const who=slotVal('who'),alt=slotVal('alt'),how=slotVal('how'),get=slotVal('get'),proof=slotVal('proof'),name=slotVal('name');
+  if(!who&&!how&&!get) return null;
+  const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+  const strip=s=>s.replace(/[.!]+$/,'');
+  let head='';
+  if(how&&who) head=`${cap(strip(how.replace(/^we\s+/i,'')))}, for ${strip(who)}.`;
+  else if(how) head=`${cap(strip(how.replace(/^we\s+/i,'')))}.`;
+  else if(who) head=`${name?name+' is ':''}Built for ${strip(who)}.`;
+  const g=get?strip(get).replace(/^(so that|so)\s+/i,''):'';
+  let sub=alt&&g?`Instead of ${strip(alt)}, ${g}.`:alt?`Instead of ${strip(alt)}.`:g?`${cap(g)}.`:'';
+  if(proof) sub+=(sub?' ':'')+cap(strip(proof))+'.';
+  return {head,sub,text:(head+' '+sub).trim()};
+}
+let lastBefore=null, lastDraft=null;
+function renderDraft(){
+  const d=composeDraft(); lastDraft=d;
+  if(!d){$('d-head').textContent='Fill the slots to see a draft.';$('d-sub').textContent='';$('c-after').textContent='—';$('c-delta').textContent='';$('draft-words').textContent='—';renderCard();return}
+  $('d-head').textContent=d.head||'';$('d-sub').textContent=d.sub;
+  const r=analyze(d.text); $('draft-words').textContent=r.n+' words';
+  $('c-after').textContent=r.score===null?'—':r.score;
+  if(lastBefore!==null&&r.score!==null){const dl=r.score-lastBefore;$('c-delta').textContent=(dl<=0?'':'+')+dl;$('c-delta').className='delta'+(dl>0?' bad':'')}else $('c-delta').textContent='';
+  renderCard();
+}
+
+/* ---------- Card ---------- */
+const canvas=$('card'),ctx=canvas.getContext('2d');
+function wrapText(c,text,x,y,maxW,lh,maxLines){const words=text.split(/\s+/);let line='',lines=0;for(const w of words){const t=line?line+' '+w:w;if(c.measureText(t).width>maxW&&line){c.fillText(line,x,y);line=w;y+=lh;lines++;if(maxLines&&lines>=maxLines-1){}}else line=t}c.fillText(line,x,y);return y+lh}
+function renderCard(){
+  const text=$('copy').value.trim(), r=analyze(text);
+  const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#E4E7EA';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(20,22,24,.14)';ctx.lineWidth=2;
+  for(let y=0;y<H;y+=100){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();ctx.fillStyle='rgba(20,22,24,.35)';ctx.font='500 18px "IBM Plex Mono", monospace';ctx.fillText(String(Math.round((H-y)/100)).padStart(2,'0'),20,y-8)}
+  // tape
+  ctx.save();ctx.translate(80,80);ctx.transform(1,0,-.18,1,0,0);ctx.fillStyle='#F5C400';ctx.fillRect(0,0,230,54);ctx.restore();
+  ctx.fillStyle='#141618';ctx.font='400 40px Anton, Impact, sans-serif';ctx.fillText('LINEUP',96,122);
+  ctx.font='500 18px "IBM Plex Mono", monospace';ctx.fillStyle='rgba(20,22,24,.6)';const cs='SAMENESS TEST · CASE '+$('case-no').textContent;ctx.fillText(cs,W-80-ctx.measureText(cs).width,115);
+  // before
+  ctx.fillStyle='rgba(20,22,24,.55)';ctx.font='500 18px "IBM Plex Mono", monospace';ctx.fillText('BEFORE',80,220);
+  ctx.fillStyle='#141618';ctx.font='400 150px Anton, Impact, sans-serif';ctx.fillText(r.score===null?'—':String(r.score),W-80-ctx.measureText(r.score===null?'—':String(r.score)).width,330);
+  ctx.font='500 30px "Instrument Sans", sans-serif';ctx.fillStyle='#141618';
+  let y=wrapText(ctx,text?text.slice(0,260)+(text.length>260?'…':''):'No copy pasted yet.',80,260,W-420,40);
+  if(r.marks.length){ctx.fillStyle='rgba(20,22,24,.6)';ctx.font='500 18px "IBM Plex Mono", monospace';ctx.fillText(`${r.marks.length} INTERCHANGEABLE PHRASES · ${r.covered}% OF WORDS`,80,Math.max(y+10,470))}
+  // divider
+  ctx.fillStyle='#141618';ctx.fillRect(80,560,W-160,3);
+  // after
+  const d=lastDraft, ra=d?analyze(d.text):null;
+  ctx.fillStyle='rgba(20,22,24,.55)';ctx.font='500 18px "IBM Plex Mono", monospace';ctx.fillText('AFTER',80,620);
+  if(ra&&ra.score!==null){ctx.fillStyle='#F5C400';ctx.font='400 150px Anton, Impact, sans-serif';const s=String(ra.score);const w=ctx.measureText(s).width;ctx.fillRect(W-80-w-20,620,w+40,130);ctx.fillStyle='#141618';ctx.fillText(s,W-80-w,735)}
+  ctx.fillStyle='#141618';ctx.font='400 58px Anton, Impact, sans-serif';
+  let y2=d&&d.head?wrapText(ctx,d.head.toUpperCase(),80,700,W-420,62):(ctx.font='500 30px "Instrument Sans", sans-serif',wrapText(ctx,'Rewrite pending. Fill the five slots.',80,680,W-420,40));
+  if(d&&d.sub){ctx.font='400 28px "Instrument Sans", sans-serif';ctx.fillStyle='rgba(20,22,24,.75)';wrapText(ctx,d.sub,80,y2+24,W-200,38)}
+  ctx.fillStyle='rgba(20,22,24,.5)';ctx.font='500 18px "IBM Plex Mono", monospace';ctx.fillText('0 = NOBODY ELSE COULD CLAIM IT · 100 = COULD BE ANYONE',80,H-60);
+}
+
+/* ---------- Wire up ---------- */
+const copyEl=$('copy');
+const lineup=$('lineup');
+
+/* ---------- Shared index (HTTP) ---------- */
+const store={on:false,entries:[],counts:{entries:0,votes:0},mine:null,judged:0,seen:new Set(),round:null,voter:null};
+try{store.mine=localStorage.getItem('lineup.mine');store.judged=Number(localStorage.getItem('lineup.judged')||0);store.voter=localStorage.getItem('lineup.voter')}catch(e){}
+if(!store.voter){store.voter=(crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now().toString(36));try{localStorage.setItem('lineup.voter',store.voter)}catch(e){}}
+async function api(path,opts){const r=await fetch(path,Object.assign({headers:{'content-type':'application/json'}},opts||{}));const j=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(j.error||('HTTP '+r.status)),{status:r.status});return j}
+function offline(msg){
+  store.on=false;$('pct-text').textContent=msg;$('submit').disabled=true;
+  $('jury').innerHTML=`<div class="cand empty">${msg} Composites stand in above so you can still see how the test works.</div>`;
+  $('test-meta').textContent='Offline';$('next-round').disabled=true;
+}
+const entryOf=id=>store.entries.find(e=>e.id===id);
+function renderIndexLine(){
+  const r=analyze(copyEl.value);
+  const n=store.counts.entries;
+  $('bar-n').textContent=n?String(n):'—';$('bar-v').textContent=String(store.counts.votes);
+  if(!store.on)return;
+  const sub=$('submit'),bb=$('badge-box');
+  if(r.score===null){$('pct-text').textContent=`${n} headlines in the index. Paste yours to see where it lands.`;sub.disabled=true;bb.hidden=true;return}
+  const below=store.entries.filter(e=>e.score<r.score).length;
+  const pct=n?Math.round(100*below/n):null;
+  let txt=n?`More generic than <b>${pct}%</b> of the ${n} headlines in the index.`:'The index is empty. Yours would be the first.';
+  const mine=store.mine&&entryOf(store.mine);
+  if(mine&&headlineOf(copyEl.value.trim())===mine.head){
+    txt+=` This one is in the index: shown ${mine.shows} times, picked ${mine.picks}${mine.rate!==null?` (${mine.rate}% pick rate)`:''}.`;
+    sub.disabled=true;sub.querySelector('span').textContent='In the index';
+    const url=location.origin+'/badge/'+mine.id+'.svg';$('badge-img').src=url+'?t='+Math.floor(Date.now()/60000);$('badge-md').textContent=`[![Lineup](${url})](${location.origin}/#e=${mine.id})`;bb.hidden=false;
+  } else {sub.disabled=false;sub.querySelector('span').textContent='Add to the index';bb.hidden=true}
+  $('pct-text').innerHTML=txt;
+}
+async function loadIndex(){
+  try{const j=await api('/api/entries?limit=2000');store.entries=j.entries;store.counts={entries:j.total,votes:j.votes};store.on=true;
+    renderIndexLine();renderBoard();if(store.round)renderJury();
+    if(!loadIndex.lineupDone&&store.entries.length>=4){loadIndex.lineupDone=true;renderLineup()}
+  }catch(e){offline('The index is unreachable right now.')}
+}
+async function submitEntry(){
+  const text=copyEl.value.trim(),r=analyze(text);
+  if(r.score===null){flash('toast2','Paste some copy first.');return}
+  const btn=$('submit');btn.disabled=true;btn.querySelector('span').textContent='Adding…';
+  try{const j=await api('/api/entries',{method:'POST',body:JSON.stringify({text})});
+    store.mine=j.id;try{localStorage.setItem('lineup.mine',j.id)}catch(e){}
+    await loadIndex();
+  }catch(e){btn.disabled=false;btn.querySelector('span').textContent='Add to the index';$('pct-text').textContent=e.message}
+}
+async function newRound(){
+  if(!store.on)return;
+  const nb=$('next-round');nb.disabled=true;
+  try{const j=await api('/api/lineup?exclude='+encodeURIComponent(store.mine||'')+'&seen='+encodeURIComponent([...store.seen].slice(-40).join(',')));
+    if(!j.lineup){store.round=null;renderJury();return}
+    j.lineup.forEach(e=>{store.seen.add(e.id);const i=store.entries.findIndex(x=>x.id===e.id);if(i>=0)store.entries[i]=Object.assign(store.entries[i],e)});
+    store.round={ids:j.lineup.map(e=>e.id),pick:null};renderJury();
+  }catch(e){$('jury-note').textContent=e.message}
+  finally{nb.disabled=false}
+}
+function renderJury(){
+  const j=$('jury');if(!store.on)return;
+  if(!store.round){const need=Math.max(0,4-store.counts.entries);j.className='jury';j.innerHTML=`<div class="cand empty">The blind test needs four headlines in the index. ${need>0?need+' more to go.':''} Add yours above.</div>`;$('jury-note').textContent='';return}
+  j.className='jury'+(store.round.pick?' revealed':'');
+  j.innerHTML=store.round.ids.map((id,i)=>{const e=entryOf(id)||{head:'(removed)',score:'—',rate:null,shows:0};
+    return `<button class="cand ${store.round.pick===id?'picked':''} ${id===store.mine?'mine':''}" type="button" data-id="${id}"><div class="no">${i+1}</div><q>${esc(e.head||'')}</q><div class="rev"><b>${e.rate===null?'—':e.rate+'%'}</b>pick rate · ${e.shows} shows<br><b>${e.score}</b>sameness</div></button>`}).join('');
+  j.querySelectorAll('.cand').forEach(b=>b.addEventListener('click',()=>pick(b.dataset.id)));
+  $('jury-note').textContent=store.round.pick?`Revealed. Scores and pick rates are live. You have judged ${store.judged} lineup${store.judged===1?'':'s'}.`:'Click the one you would click.';
+  $('test-meta').textContent=`${store.counts.entries} headlines · ${store.counts.votes} judgments · live`;
+}
+async function pick(id){
+  if(!store.round||store.round.pick)return;
+  store.round.pick=id;store.judged++;try{localStorage.setItem('lineup.judged',String(store.judged))}catch(e){}
+  renderJury();
+  try{await api('/api/votes',{method:'POST',body:JSON.stringify({ids:store.round.ids,pick:id,voter:store.voter})});await loadIndex();}
+  catch(e){$('jury-note').textContent='Revealed. '+e.message}
+}
+function renderBoard(){
+  const top=store.entries.filter(e=>e.shows>=3).sort((a,b)=>b.rate-a.rate||b.shows-a.shows).slice(0,5);
+  $('board-top').innerHTML=top.length?top.map((e,i)=>`<li><span class="rk">${i+1}</span><q>${esc(e.head)}</q><span class="st">${e.rate}%<small>${e.shows} shows</small></span></li>`).join(''):'<li class="empty">Needs at least three showings per headline. Judge a few lineups.</li>';
+  const gen=store.entries.slice().sort((a,b)=>b.score-a.score).slice(0,5);
+  $('board-generic').innerHTML=gen.length?gen.map((e,i)=>`<li><span class="rk">${i+1}</span><q>${esc(e.head)}</q><span class="st">${e.score}<small>/100</small></span></li>`).join(''):'<li class="empty">Nothing in the index yet.</li>';
+}
+function renderLineup(){
+  const you=copyEl.value.trim();
+  let others=LINEUP.slice();
+  if(store.entries.length>=4){const pool=store.entries.filter(e=>e.id!==store.mine).map(e=>e.head);for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}if(pool.length>=4)others=pool.slice(0,4)}
+  const items=[others[0],others[1],you||'Your headline goes here.',others[2],others[3]];
+  lineup.innerHTML=items.map((t,i)=>`<div class="suspect ${i===2?'you':''}"><div class="no">${i+1}</div><q>${esc(t.length>140?t.slice(0,140)+'…':t)}</q></div>`).join('');
+}
+async function connect(){
+  await loadIndex();
+  if(store.on){await newRound();setInterval(loadIndex,25000)}
+  const m=location.hash.match(/e=([A-Za-z0-9_-]+)/);
+  if(m&&store.on){try{const e=await api('/api/entries/'+m[1]);copyEl.value=e.text;store.mine=e.id;update();renderLineup()}catch(err){}}
+}
+$('badge-copy').addEventListener('click',()=>copyText($('badge-md').textContent,'toast2'));
+$('submit').addEventListener('click',submitEntry);
+$('next-round').addEventListener('click',newRound);
+
+let raf;
+function update(){
+  cancelAnimationFrame(raf);
+  raf=requestAnimationFrame(()=>{
+    const text=copyEl.value;const r=analyze(text);
+    $('count').textContent=r.n+' words';
+    renderEvidence(text,r);renderVerdict(r);
+    lastBefore=r.score;$('c-before').textContent=r.score===null?'—':r.score;
+    renderDraft();renderIndexLine();
+    try{localStorage.setItem('lineup.copy',text)}catch(e){}
+  });
+}
+copyEl.addEventListener('input',update);
+const samples=$('samples');
+SAMPLES.forEach(s=>{const b=document.createElement('button');b.className='chip';b.type='button';b.textContent=s.n;b.addEventListener('click',()=>{copyEl.value=s.t;update();});samples.appendChild(b)});
+
+copyEl.addEventListener('input',renderLineup);
+
+let toastT;function flash(id,s){$(id).textContent=s;clearTimeout(toastT);toastT=setTimeout(()=>{$(id).textContent=''},3500)}
+function copyText(t,id){const ok=()=>flash(id,'Copied.');if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok).catch(()=>fb())}else fb();function fb(){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');ok()}catch(e){flash(id,'Select and copy manually.')}ta.remove()}}
+$('copy-rewrite').addEventListener('click',()=>{if(!lastDraft){flash('toast','Fill the slots first.');return}copyText(lastDraft.text,'toast')});
+$('use-rewrite').addEventListener('click',()=>{if(!lastDraft){flash('toast','Fill the slots first.');return}copyEl.value=lastDraft.text;update();renderLineup();document.getElementById('room').scrollIntoView({behavior:'smooth'})});
+$('copy-report').addEventListener('click',()=>{
+  const text=copyEl.value.trim(),r=analyze(text);if(r.score===null){flash('toast2','Paste some copy first.');return}
+  const parts=Object.values(r.parts).map(p=>`  ${p.t.padEnd(11)} ${p.hit?'present':p.part?'partial':'missing'}`).join('\n');
+  const marks=r.marks.map((m,i)=>`  ${String(i+1).padStart(2,'0')}  ${m.ph}`).join('\n');
+  const d=lastDraft,ra=d?analyze(d.text):null;
+  copyText(`LINEUP · SAMENESS TEST\n\nBEFORE (${r.score}/100)\n${text}\n\nTagged phrases (${r.covered}% of words):\n${marks||'  none'}\n\nFive parts:\n${parts}\n${d?`\nAFTER (${ra.score}/100)\n${d.text}\n`:''}\n0 = nobody else could claim it. 100 = could be anyone.`,'toast2');
+});
+$('reset').addEventListener('click',()=>{copyEl.value='';SLOTS.forEach(s=>$('s-'+s.id).value='');$('case-no').textContent=String(Math.floor(1+Math.random()*8999)).padStart(4,'0');update();renderLineup();window.scrollTo({top:0,behavior:'smooth'});flash('toast2','New case opened.')});
+
+/* Boot */
+let saved='';try{saved=localStorage.getItem('lineup.copy')||''}catch(e){}
+copyEl.value=saved||SAMPLES[0].t;
+$('case-no').textContent=String(Math.floor(1+Math.random()*8999)).padStart(4,'0');
+renderLineup();update();connect();
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(renderCard);
+})();
+</script>
+</body>
+</html>
