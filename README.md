@@ -51,6 +51,12 @@ Who it's for. What it replaces. Why you. The outcome. The proof. Each one presen
 
 <p align="center"><img src="docs/five-parts.png" alt="The five-part check on a half-specific headline" width="840"></p>
 
+### The fix
+
+With a key set, the verdict ends with the coach. Claude reads the tagged phrases and the missing parts, drafts three rewrites from three angles, and every draft goes back through the ruler before it is shown. Any draft can enter the blind test as a variant of the original, so the crowd decides which one wins.
+
+<p align="center"><img src="docs/coach.png" alt="Three Claude rewrites scored by the ruler, each with a button to enter it in the blind test" width="840"></p>
+
 ### The crowd
 
 Four headlines from the index, no logos. Visitors pick the one they would click. Every headline earns a pick rate, ranked by the lower bound of a Wilson interval so one lucky showing never tops the board.
@@ -70,7 +76,9 @@ Four headlines from the index, no logos. Visitors pick the one they would click.
 | **Share pages** | `/e/:id` carries Open Graph tags with the score and pick rate in the title. Paste it on LinkedIn. |
 | **Open data** | `/api/export.csv` downloads the whole index with scores, parts and pick rates. |
 | **The workbench** | Five plain-English slots assemble a specific headline and rescore it live. |
-| **The coach** | Optional. With a Claude API key, three rewrites from three angles, each scored by the ruler before you see it. |
+| **The coach** | With a Claude API key, the verdict ends with three rewrites from three angles. Each is scored by the ruler before you see it, and each is one click from entering the blind test against your original. |
+| **The batch** | `npm run batch` scores 100 real homepages and prints the phrases that appear on the most sites. |
+| **The eval** | `npm run eval` measures the ruler against the crowd: how often the picked headline had the lowest score, and where the two disagree. |
 
 ## Run it
 
@@ -81,7 +89,9 @@ git clone https://github.com/neelbarm/GTMTool lineup
 cd lineup
 npm run seed     # 14 fictional composites so the blind test works on day one
 npm start        # http://localhost:3000
-npm test         # model, calibration set and API tests
+npm test         # model, calibration set, batch, eval and API tests
+npm run batch    # score 100 real homepages (scripts/sites.txt) and print the most common phrases
+npm run eval     # measure the ruler against the crowd's votes
 ```
 
 Data lives in `./data/lineup.sqlite`. Set `DATA_DIR` to put it elsewhere.
@@ -108,9 +118,9 @@ docker run -p 3000:3000 -v lineup_data:/data -e ADMIN_TOKEN=change-me lineup
 | `TRUST_PROXY` | `0` | Set to `1` behind a reverse proxy so rate limits key on `X-Forwarded-For` |
 | `LINEUP_SECRET` | generated | Signs lineup tokens. Generated once and stored in the database if unset. |
 
-### The coach (optional)
+### The coach
 
-Everything above runs without any AI. If you want help rewriting, install the SDK and set a key, and a "Draft three with Claude" button appears in the workbench.
+The ruler, the index and the blind test run without any AI. The coach needs a key. Ship with it on: install the SDK, set the key, and the verdict ends with a "Draft three with Claude" button.
 
 ```sh
 npm install                       # pulls @anthropic-ai/sdk, the only optional dependency
@@ -124,6 +134,24 @@ The coach reads the ruler's findings, writes a three-sentence critique, fills th
 | `ANTHROPIC_API_KEY` | unset | Enables the coach |
 | `COACH_MODEL` | `claude-opus-5-5` | Which Claude model drafts |
 | `COACH_DAILY_CAP` | `200` | Rounds per day on this instance, so a public deploy has a known ceiling. Ten per hour per IP on top. |
+
+## Score a batch of real homepages
+
+```sh
+npm run batch                       # reads scripts/sites.txt, writes data/batch.csv
+node scripts/batch.js mine.txt --out out.csv --concurrency 4
+```
+
+Each site is fetched once. The first `<h1>` and the paragraph after it are scored; if there is no usable `<h1>`, the Open Graph description, the meta description or the title stands in. The CSV has one row per site with the score, the five parts and the headline. The summary prints the median, the share that could be anyone, the share of sites missing each part, and the phrases found on the most sites. Edit `scripts/sites.txt` to score your own category.
+
+## Measure the ruler against the crowd
+
+```sh
+npm run eval                        # reads the live database
+node scripts/eval.js --min-shows 20 --json
+```
+
+Every vote is a human judgment: four headlines shown, one picked. If the sameness score means anything, the picked headline should tend to have the lowest score in its set. The eval reports how often that holds against the 25% you would get by chance, the rank correlation between score and pick rate, and two lists of disagreements: headlines the ruler called generic that the crowd keeps picking, and headlines it called specific that the crowd ignores. Each one is a lexicon gap, a detector gap, or a reason the crowd is not the buyer. Fix the model, rerun `npm test`, and the golden set tells you what moved.
 
 ## How the score works
 
@@ -163,6 +191,8 @@ lib/model.js       the scoring model (shared by browser and server)
 lib/coach.js       the optional Claude coach
 public/index.html  the page
 scripts/seed.js    seeds 14 fictional composites
+scripts/batch.js   scores a list of real homepages (scripts/sites.txt)
+scripts/eval.js    measures the ruler against the crowd's votes
 test/              model tests, golden calibration set, API tests, coach tests
 ```
 
