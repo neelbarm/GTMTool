@@ -8,7 +8,7 @@
 A sameness test for B2B homepage copy. A ruler, and a crowd. No AI required.</p>
 
 <p align="center">
-  <a href="https://project-rip1l.vercel.app">Try it</a> ·
+  <a href="https://lineupgtm.vercel.app">Try it</a> ·
   <a href="#run-it">Run it</a> ·
   <a href="#how-the-score-works">How the score works</a> ·
   <a href="#api">API</a> ·
