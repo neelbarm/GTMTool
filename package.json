@@ -6,12 +6,18 @@
   "repository": "github:neelbarm/GTMTool",
   "homepage": "https://github.com/neelbarm/GTMTool",
   "private": true,
-  "engines": { "node": ">=22.13" },
-  "optionalDependencies": { "@anthropic-ai/sdk": "^0.132.1" },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "optionalDependencies": {
+    "@anthropic-ai/sdk": "^0.132.1"
+  },
   "scripts": {
     "start": "node --no-warnings server.js",
     "dev": "node --no-warnings --watch server.js",
     "seed": "node --no-warnings scripts/seed.js",
-    "test": "node --no-warnings --test test/*.test.js"
+    "test": "node --no-warnings --test test/*.test.js",
+    "batch": "node --no-warnings scripts/batch.js",
+    "eval": "node --no-warnings scripts/eval.js"
   }
 }
