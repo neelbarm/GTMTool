@@ -1,14 +1,7 @@
+node_modules/
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
 .env
-*.env
-!.env.example
-
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-.pytest_cache/
-.ruff_cache/
-
-# Working audio. The ten submitted calls are force-added; see README.
-artifacts/calls/**/recording.wav
-artifacts/calls/**/*.raw
+.DS_Store

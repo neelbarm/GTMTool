@@ -1,164 +1,175 @@
-# Pretty Good AI voice tester
+<p align="center">
+  <img src="docs/hero.png" alt="Lineup: could a buyer pick you out of a lineup?" width="840">
+</p>
 
-Places automated phone calls to the Pretty Good AI assessment line, plays a
-realistic fictional patient on the line, and captures everything needed to judge
-how the receptionist agent behaved: a two-sided recording, a speaker-labelled
-transcript, structured event logs, and a post-call analysis pass.
+<h1 align="center">Lineup</h1>
 
-Each call is driven by a scenario file — a patient with a name and a date of
-birth, a goal, and rules for how to push toward it. The twelve scenarios in
-`scenarios/` cover routine scheduling through to the cases where a receptionist
-is most likely to get something wrong: weekend bookings, ambiguous dates,
-half-remembered medications, and requests it should refuse.
+<p align="center"><strong>Could a buyer pick you out of a lineup?</strong><br>
+A sameness test for B2B homepage copy. A ruler, and a crowd. No AI required.</p>
 
-## How it works
+<p align="center">
+  <a href="https://project-rip1l.vercel.app">Try it</a> ·
+  <a href="#run-it">Run it</a> ·
+  <a href="#how-the-score-works">How the score works</a> ·
+  <a href="#api">API</a> ·
+  <a href="CONTRIBUTING.md">Contribute</a>
+</p>
 
-```
-scripts/run_call.py
-    │  validates settings, checks the destination against the allowlist
-    ▼
-Twilio outbound call ── recording on, dual channel, hard time limit
-    │
-    ▼  POST /voice  →  TwiML: <Connect><Stream>
-Twilio bidirectional Media Stream (WebSocket, G.711 mu-law 8 kHz)
-    │
-    ▼  /stream
-app/bridge.py ──────► OpenAI Realtime session (same mu-law, no transcoding)
-    │                  patient voice, turn detection, end_call tool
-    ▼
-artifacts/calls/<call>/  metadata.json · events.jsonl · transcript.txt/json
-    │
-    ▼
-app/evaluator.py → evaluation.json → (you listen) → docs/bug-report.md
-```
+<p align="center">
+  <a href="https://github.com/neelbarm/GTMTool/actions/workflows/test.yml"><img src="https://github.com/neelbarm/GTMTool/actions/workflows/test.yml/badge.svg" alt="tests"></a>
+  <img src="https://img.shields.io/badge/node-%3E%3D22.13-black" alt="node 22.13+">
+  <img src="https://img.shields.io/badge/dependencies-0-black" alt="zero dependencies">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-F5C400" alt="MIT"></a>
+</p>
 
-Longer reasoning about why it is built this way is in
-[docs/architecture.md](docs/architecture.md).
+---
 
-## Safety
+Paste a headline and subhead. Lineup tells you how much of it could sit on a competitor's site unchanged, tags every interchangeable phrase as evidence, checks whether the five parts of a real position are present, and helps you rewrite it. Then it puts your headline in front of real people in a running blind test and tells you how often they would click it.
 
-This code dials exactly one number. `ASSESSMENT_LINE` in `app/config.py` is a
-constant, not a setting; `ALLOWED_DESTINATION` in `.env` must match it or the app
-refuses to start, and every path to the Twilio calls API goes through
-`assert_allowed()`. `tests/test_destination_guard.py` proves that a typo'd digit,
-a differently-formatted version of the same number, or any other destination
-raises before the Twilio SDK is touched.
+## Why
 
-Every call also carries a `time_limit` and the bridge has its own watchdog, so a
-wedged session cannot hold the line open.
+- Wynter's June 2026 differentiation study showed 100 B2B SaaS marketing leaders five real value props with the names removed. They matched copy to brand at **1.86 out of 5**. Chance is 1.0. **64%** said it is outright difficult to tell vendors apart from their websites.
+- Bain surveyed more than 1,000 B2B leaders for its 2026 B2B Growth Agenda. Only **4%** had a value proposition that was both clear and consistently understood. Those companies grew 19% in 2025. The rest grew 12%.
 
-All patient identities in `scenarios/` are fictional.
+Everyone complains about pipeline. Sameness is the thing upstream of it that nobody measures. Lineup measures it.
 
-## Setup
+## What it does
 
-Requires Python 3.11, `ffmpeg` (for MP3 conversion), a Twilio account with one
-voice-capable number, an OpenAI API key with Realtime access, and a tunnel.
+### The ruler
 
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env      # then fill it in
-```
+Every tagged phrase is evidence, numbered, with a reason. The score is deterministic: same input, same number, every time.
 
-Start the tunnel and put its https URL in `PUBLIC_BASE_URL`:
+<p align="center"><img src="docs/generic.png" alt="A generic headline: 15 phrases tagged, sameness 97 out of 100, four of five parts missing" width="840"></p>
 
-```bash
-ngrok http 8000           # or: cloudflared tunnel --url http://localhost:8000
-```
+The same ruler on copy that only one company could have written:
 
-Check the Realtime session config is accepted before spending a call on it:
+<p align="center"><img src="docs/specific.png" alt="A specific headline: nothing tagged, sameness 0, four of five parts present" width="840"></p>
 
-```bash
-python scripts/check_realtime.py
-```
+### The five parts
 
-This matters because the Realtime API's audio format block changed shape between
-the beta and GA versions, and the wrong shape does not fail loudly — it plays
-static down the phone. The script prints the format the server actually agreed
-to. Both directions should be mu-law.
+Who it's for. What it replaces. Why you. The outcome. The proof. Each one present, partial, or missing.
 
-## Running a call
+<p align="center"><img src="docs/five-parts.png" alt="The five-part check on a half-specific headline" width="840"></p>
 
-Two terminals. Server first:
+### The crowd
 
-```bash
-uvicorn app.main:app --port 8000
-```
+Four headlines from the index, no logos. Visitors pick the one they would click. Every headline earns a pick rate, ranked by the lower bound of a Wilson interval so one lucky showing never tops the board.
 
-Then:
+<p align="center"><img src="docs/blind-test.png" alt="The blind test with pick rates revealed" width="840"></p>
 
-```bash
-python scripts/run_call.py --scenario scenarios/07_weekend_booking.yaml
-```
+<p align="center"><img src="docs/boards.png" alt="Most picked and most generic leaderboards" width="840"></p>
 
-The call runs, the bridge writes artifacts when it ends, then:
+### Everything else
 
-```bash
-python scripts/fetch_recordings.py --all      # download recordings, convert to MP3
-python scripts/build_bug_report.py --evaluate # candidate findings per call
-# listen to each recording at the timestamps given, mark the real ones
-python scripts/build_bug_report.py --report   # writes docs/bug-report.md
-```
-
-`--evaluate` skips calls that already have an `evaluation.json`, so running it
-again after adding a couple of calls will not overwrite the `"validated": true`
-flags you set by hand. `--force` re-runs them and carries those flags across.
-
-Run `fetch_recordings.py` before evaluating. The bridge measures time from when
-the call is *answered*, Twilio records from when it is *initiated*, so transcript
-timestamps are shifted onto the recording's clock as part of the download —
-otherwise every timestamp in the bug report would point at the wrong moment in
-the audio by however long the line rang. The shift is recorded as
-`recording_offset_seconds` in `metadata.json`, and the pre-shift values are kept
-as `at_stream` in `transcript.json`.
-
-## Environment variables
-
-| Variable | Purpose |
+| Part | What you get |
 |---|---|
-| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | Twilio credentials |
-| `TWILIO_PHONE_NUMBER` | The single number all test calls come from, E.164 |
-| `OPENAI_API_KEY` | Realtime session and post-call evaluator |
-| `PUBLIC_BASE_URL` | https tunnel URL, no trailing slash |
-| `ALLOWED_DESTINATION` | Must equal the constant in `app/config.py` |
-| `REALTIME_MODEL` | Default `gpt-realtime-2.1` |
-| `REALTIME_VOICE` | Default `cedar` |
-| `EVALUATOR_MODEL` | Text model for post-call analysis |
-| `ARTIFACTS_DIR` | Default `artifacts/calls` |
-| `MAX_CALL_SECONDS` | Hard stop, default 240 |
+| **Sameness index** | 0 to 100. The share of your words carried by interchangeable B2B phrases, weighted by how empty each is, plus a penalty per missing part, minus credit for checkable specifics. |
+| **The index** | Add your headline to a shared corpus. Your score comes back as a percentile against everyone before you. |
+| **Variants** | Submit a second version of your headline. Both compete against the field, never against each other in the same lineup, and the page calls a winner once each has ten showings. |
+| **Badges** | `/badge/:id.svg` shows a headline's sameness score and pick rate. Put it in a README or on a site. |
+| **Share pages** | `/e/:id` carries Open Graph tags with the score and pick rate in the title. Paste it on LinkedIn. |
+| **Open data** | `/api/export.csv` downloads the whole index with scores, parts and pick rates. |
+| **The workbench** | Five plain-English slots assemble a specific headline and rescore it live. |
+| **The coach** | Optional. With a Claude API key, three rewrites from three angles, each scored by the ruler before you see it. |
 
-## What each call produces
+## Run it
 
-```
-artifacts/calls/1432-weekend-booking/
-  metadata.json    scenario, call SID, duration, model, git SHA, why it ended
-  events.jsonl     timestamped stream events — barge-ins, errors, tool calls
-  transcript.txt   [00:41] PATIENT: Could I come in this Sunday around ten?
-  transcript.json  the same, machine-readable
-  recording.mp3    both sides, from Twilio's dual-channel recording
-  evaluation.json  candidate findings, all marked "validated": false
+Needs Node 22.13 or newer. It uses the SQLite built into Node, so there is nothing to install for the core.
+
+```sh
+git clone https://github.com/neelbarm/GTMTool lineup
+cd lineup
+npm run seed     # 14 fictional composites so the blind test works on day one
+npm start        # http://localhost:3000
+npm test         # model, calibration set and API tests
 ```
 
-Transcripts come from the Realtime session rather than a separate pass: the
-agent's side from input audio transcription, the patient's side from the model's
-own output transcript. Both sides are already attributed, so there is no
-diarisation step to get wrong.
+Data lives in `./data/lineup.sqlite`. Set `DATA_DIR` to put it elsewhere.
 
-## Known limitations
+### Deploy
 
-- Transcription of the agent's side is done by a model listening to 8 kHz phone
-  audio. Names, medication names and numbers are the least reliable part; the
-  recording is the source of truth and the bug report cites timestamps so any
-  claim can be checked against it.
-- The evaluator proposes findings, it does not confirm them. Nothing reaches
-  `docs/bug-report.md` until a human has listened.
-- `ngrok`'s free tier issues a new URL each restart, so `PUBLIC_BASE_URL` needs
-  updating whenever the tunnel restarts.
-- The bridge accepts both the beta and GA spellings of several Realtime events.
-  That is deliberate defensiveness against an API rename, not evidence that both
-  versions were tested.
-- One call at a time. Concurrency was not needed and was not built.
-- Turn timestamps mark when each side *started* speaking, since transcription
-  finishes at unpredictable times. They are accurate to about the length of a
-  turn, which is enough to find a moment in a recording but not to measure
-  response latency.
+Anything that runs Node and keeps a disk works. The Dockerfile seeds and starts the server; mount a volume at `/data`.
+
+```sh
+docker build -t lineup .
+docker run -p 3000:3000 -v lineup_data:/data -e ADMIN_TOKEN=change-me lineup
+```
+
+- **Render:** New → Blueprint → point it at this repo. `render.yaml` sets up the service and a 1 GB disk.
+- **Fly.io:** `fly launch --copy-config`, `fly volumes create lineup_data --size 1`, `fly deploy`.
+- **Vercel:** `vercel.json` and `api/index.js` are included for test deployments. The index is stored in `/tmp`, so it resets when the function goes cold. Fine for a demo, not for the real instance.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `PORT` | `3000` | Listen port |
+| `DATA_DIR` | `./data` | Where the SQLite file lives |
+| `SITE_URL` | request host | Absolute URL used in share pages and badges |
+| `ADMIN_TOKEN` | unset | Enables `DELETE /api/entries/:id` with `Authorization: Bearer <token>` to hide spam |
+| `TRUST_PROXY` | `0` | Set to `1` behind a reverse proxy so rate limits key on `X-Forwarded-For` |
+| `LINEUP_SECRET` | generated | Signs lineup tokens. Generated once and stored in the database if unset. |
+
+### The coach (optional)
+
+Everything above runs without any AI. If you want help rewriting, install the SDK and set a key, and a "Draft three with Claude" button appears in the workbench.
+
+```sh
+npm install                       # pulls @anthropic-ai/sdk, the only optional dependency
+ANTHROPIC_API_KEY=sk-ant-... npm start
+```
+
+The coach reads the ruler's findings, writes a three-sentence critique, fills the five slots as far as the copy allows, and drafts three rewrites: buyer-first, alternative-first, outcome-first. Every draft is scored by the same deterministic model before it is shown, so the ruler stays the judge. It never invents numbers or customers; where the copy has no proof it leaves a bracketed placeholder for you to fill.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | unset | Enables the coach |
+| `COACH_MODEL` | `claude-opus-5-5` | Which Claude model drafts |
+| `COACH_DAILY_CAP` | `200` | Rounds per day on this instance, so a public deploy has a known ceiling. Ten per hour per IP on top. |
+
+## How the score works
+
+The model is one file, [`lib/model.js`](lib/model.js), used by both the page and the server, so the number you see in the browser is the number that goes in the index.
+
+1. **Lexicon match.** About 240 phrases that could sit on any B2B site, each weighted 0.3 to 1.0 by how empty it is. Longest match first, no overlaps.
+2. **Emptiness.** Weighted matched words over total words, raised to 0.6 and scaled to 60 points, so the first few empty phrases cost more than the last few.
+3. **Missing parts.** Ten points for each of the five parts that is missing, four if partial. A buyer counts as named when "for", "built for" or "helps" is followed by a phrase that could not describe every company: a proper noun, a number, an industry, a role, a trade, or a plural noun that is not on the generic list. "Modern teams" and "businesses of all sizes" are not buyers. The other parts are detected by pattern: a named alternative, a concrete noun, an outcome with a number, proof with a number.
+4. **Specifics credit.** Up to 15 points back for numbers, concrete nouns and proper nouns. Without a single number the credit is capped at 4 and 6 points are added, because a claim with no number is one a buyer cannot check.
+5. Clamped to 0 to 100.
+
+It cannot tell whether a claim is true. It rewards a specific lie. Treat it as a linter, not a judge.
+
+[`test/golden.json`](test/golden.json) is a labelled set of forty fictional headlines. The model must keep every generic one above every specific one and each band inside its range. Change the model and the golden tests tell you what moved.
+
+## API
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/api/entries?limit=1000` | The index without full text. Each entry: `id, head, score, covered, parts, shows, picks, rate`. |
+| `POST` | `/api/entries` | `{text, variantOf?}`. 12 to 400 characters. `variantOf` is an indexed entry id; the new entry joins its group. Returns `201` with the entry, or `200` with `duplicate: true`. 20 per hour per IP. |
+| `GET` | `/api/entries/:id` | One entry with full text, stats, and its `variants`. |
+| `DELETE` | `/api/entries/:id` | Admin only. Hides the entry. |
+| `GET` | `/api/lineup?exclude=id&seen=id,id` | Four random entries from four different groups, preferring ones the caller hasn't seen, plus a signed single-use `token` good for an hour. |
+| `POST` | `/api/votes` | `{token, pick, voter}`. The token must come from `/api/lineup`, so a vote can only be cast on a lineup the server served, once. One vote per voter per set of four. 300 per hour per IP. |
+| `GET` | `/badge/:id.svg` | Badge. Green under 45, yellow to 69, red from 70. |
+| `GET` | `/e/:id` | Share page with Open Graph tags, redirects to the app. |
+| `GET` | `/api/export.csv` | Everything, for analysis. |
+| `POST` | `/api/coach` | `{text}`. A critique, the five slots, and three scored rewrites. `503` when no key is configured. |
+| `GET` | `/api/health` | `{ok, coach, entries, votes}` |
+
+## Project layout
+
+```
+server.js          HTTP server, SQLite store, routes, rate limits, signed lineup tokens
+lib/model.js       the scoring model (shared by browser and server)
+lib/coach.js       the optional Claude coach
+public/index.html  the page
+scripts/seed.js    seeds 14 fictional composites
+test/              model tests, golden calibration set, API tests, coach tests
+```
+
+## Contributing
+
+The most valuable contributions are to the lexicon and the part detectors in `lib/model.js`. If you've seen a phrase on four different homepages, it belongs in the lexicon. If a real, specific headline scores badly, open an issue with the text and the score. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+MIT. The index data on the public instance is published under the same terms: download it, analyze it, cite it, link back.
