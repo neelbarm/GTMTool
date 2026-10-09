@@ -8,8 +8,8 @@ No AI. A ruler, and a crowd.
 
 ## Why
 
-- Bain found only 4% of executives say their company's value proposition is strong and consistently understood.
-- Wynter's 2026 differentiation study found 64% of B2B buyers can't tell vendors apart from their websites. In a blind test, buyers matched copy to brand at 1.86 out of 5. Chance is 1.0.
+- Bain surveyed more than 1,000 B2B leaders for its 2026 B2B Growth Agenda. Only 4% had a value proposition that was both clear and consistently understood.
+- Wynter's June 2026 differentiation study asked 100 B2B SaaS marketing leaders about their own category. 64% said it is outright difficult to tell vendors apart from their websites. Shown five real value props with the names removed, they matched copy to brand at 1.86 out of 5. Chance is 1.0.
 - TrustRadius found "unclear messaging about what they do" is a top-three reason buyers walk.
 
 Everyone complains about pipeline. Sameness is the thing upstream of it that nobody measures. Lineup measures it.
