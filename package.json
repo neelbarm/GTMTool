@@ -1,0 +1,19 @@
+{
+  "name": "deskhand",
+  "version": "0.1.0",
+  "description": "A Mac agent that does one workflow at a time, reads the screen through the browser DOM or the macOS Accessibility tree, and shows you a diff before it writes anything.",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "bin": { "deskhand": "./bin/deskhand.js" },
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --no-warnings --test test/*.test.js",
+    "fixtures": "node test/fixtures/server.js",
+    "build:mac": "sh mac/build.sh"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.132.1",
+    "playwright": "1.56.1"
+  }
+}

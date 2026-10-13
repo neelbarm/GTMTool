@@ -1,0 +1,4 @@
+node_modules/
+mac/axq
+*.log
+.DS_Store

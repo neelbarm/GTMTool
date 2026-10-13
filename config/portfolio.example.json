@@ -1,0 +1,7 @@
+{
+  "_comment": "One entry per company. metric.selector reads the number off the page without a model call; metric.describe asks Claude to find it in the page text. screenshot: true (whole page), false, or a CSS selector for the region.",
+  "companies": [
+    { "name": "Acme Analytics", "url": "http://localhost:4545/dash/acme-analytics", "metric": { "label": "MRR", "selector": "#mrr" }, "screenshot": ".kpi" },
+    { "name": "Northwind", "url": "http://localhost:4545/dash/northwind", "metric": { "label": "MRR", "describe": "monthly recurring revenue" }, "screenshot": true }
+  ]
+}

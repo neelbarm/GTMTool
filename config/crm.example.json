@@ -1,0 +1,18 @@
+{
+  "name": "Example CRM",
+  "_comment": "A form map: where the create form lives, how to search, and which label each record field goes into. Copy this and point it at your CRM. HubSpot example in crm.hubspot.json.",
+  "createUrl": "http://localhost:4545/crm/new",
+  "searchUrl": "http://localhost:4545/crm?q={q}",
+  "fields": {
+    "name": { "label": "Company name" },
+    "domain": { "label": "Website" },
+    "one_liner": { "label": "Description" },
+    "industry": { "label": "Industry" },
+    "size": { "label": "Employees" },
+    "location": { "label": "Location" },
+    "note": { "label": "Notes" }
+  },
+  "submitButton": "Create company",
+  "updateButton": "Save",
+  "successText": "saved"
+}

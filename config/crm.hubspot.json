@@ -1,0 +1,19 @@
+{
+  "name": "HubSpot",
+  "_comment": "Untested against a live HubSpot account: the labels below are HubSpot's default company properties as of 2026. Replace PORTAL with your portal id. If a label is renamed in your portal, the agent asks Claude to find the field from the form's tree and logs what it picked.",
+  "createUrl": "https://app.hubspot.com/contacts/PORTAL/objects/0-2/views/all/list",
+  "searchUrl": "https://app.hubspot.com/contacts/PORTAL/objects/0-2/views/all/list?query={q}",
+  "openCreate": "Create company",
+  "fields": {
+    "domain": { "label": "Company domain name" },
+    "name": { "label": "Name" },
+    "industry": { "label": "Industry" },
+    "one_liner": { "label": "Description" },
+    "size": { "label": "Number of Employees" },
+    "location": { "label": "City" },
+    "note": { "label": "About us" }
+  },
+  "submitButton": "Create",
+  "updateButton": "Save",
+  "successText": ""
+}

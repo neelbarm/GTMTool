@@ -1,0 +1,16 @@
+{
+  "_comment": "Copy to ~/.deskhand/config.json. Everything is optional; command-line flags win over this file.",
+  "anthropicKey": "",
+  "model": "claude-sonnet-5-5",
+  "browser": { "headless": false, "channel": "chrome" },
+  "crm": "~/deskhand/config/crm.hubspot.json",
+  "forms": "~/deskhand/config/forms.example.json",
+  "portfolio": "~/deskhand/config/portfolio.example.json",
+  "cms": "~/deskhand/config/cms.example.json",
+  "inboxUrl": "https://mail.google.com/mail/u/0/#inbox",
+  "taskTarget": "things",
+  "notionToken": "",
+  "notionDatabase": "",
+  "owner": "Neel",
+  "lineupUrl": "https://lineupgtm.vercel.app"
+}

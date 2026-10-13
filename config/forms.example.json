@@ -1,0 +1,19 @@
+{
+  "name": "Example payroll portal",
+  "_comment": "schema: the fields to pull out of the intake email (key → description). pages: the vendor's forms in order; each submit is gated. tracker: a CSV or a web form that gets one row per onboarding. $owner, $ref, $date and 'literal' are the special column sources.",
+  "nameField": "company",
+  "schema": {
+    "company": "Legal company name",
+    "ein": "Employer identification number, digits only",
+    "state": "US state of incorporation, two letters",
+    "frequency": "Pay frequency: Weekly, Biweekly, Semimonthly or Monthly",
+    "admin_name": "Full name of the person who will administer payroll",
+    "admin_email": "Email of that person",
+    "headcount": "Number of employees to be paid"
+  },
+  "pages": [
+    { "title": "Company", "url": "http://localhost:4545/payroll/new", "fields": { "company": { "label": "Legal company name" }, "ein": { "label": "EIN" }, "state": { "label": "State of incorporation" }, "frequency": { "label": "Pay frequency" } }, "submit": "Continue", "confirm": false },
+    { "title": "Admin", "fields": { "admin_name": { "label": "Admin name" }, "admin_email": { "label": "Admin email" }, "headcount": { "label": "Headcount" } }, "submit": "Submit application", "successText": "submitted", "captureRef": "PR-\\d+" }
+  ],
+  "tracker": { "type": "csv", "path": "~/.deskhand/onboarding.csv", "columns": { "date": "$date", "customer": "company", "owner": "$owner", "reference": "$ref", "status": "'Submitted'" } }
+}

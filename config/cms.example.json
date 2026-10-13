@@ -1,0 +1,7 @@
+{
+  "name": "Example CMS",
+  "_comment": "url: the editor page for your home page. field.label: the accessible label of the hero headline input (falls back to asking Claude to find it). saveButton: a draft/save button; anything that looks like Publish is refused.",
+  "url": "http://localhost:4545/cms/home",
+  "field": { "label": "Hero headline" },
+  "saveButton": "Save draft"
+}
