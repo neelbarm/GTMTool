@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/cover.png" alt="deskhand" width="100%"></p>
+
 # deskhand
 
 **A Mac agent that does one workflow at a time, and shows you a diff before it touches anything.**
@@ -22,6 +24,8 @@ Apple has not shipped a personal agent that drives your apps for you. The open-s
 `y` writes it. `n` stops. `e` lets you fix a field first. Every run leaves a log of what the agent saw, what it decided, and what you said.
 
 Add `--ui` and the same gate opens in a local approval panel, with the run's steps streaming down the side. Click a value to edit it, then Approve. The terminal keeps working too; whichever answers first wins.
+
+![The terminal gate](docs/terminal.png)
 
 ![The approval panel, paused on a CRM update](docs/panel-gate.png)
 
