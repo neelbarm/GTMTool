@@ -21,6 +21,12 @@ Apple has not shipped a personal agent that drives your apps for you. The open-s
 
 `y` writes it. `n` stops. `e` lets you fix a field first. Every run leaves a log of what the agent saw, what it decided, and what you said.
 
+Add `--ui` and the same gate opens in a local approval panel, with the run's steps streaming down the side. Click a value to edit it, then Approve. The terminal keeps working too; whichever answers first wins.
+
+![The approval panel, paused on a CRM update](docs/panel-gate.png)
+
+![An inbox triage gate: three asks, one click](docs/panel-inbox.png)
+
 ## The five runbooks
 
 | Runbook | Reads | Writes | Gate |
@@ -32,7 +38,7 @@ Apple has not shipped a personal agent that drives your apps for you. The open-s
 | `lineup-to-site` | The winning headline from a [Lineup](https://github.com/neelbarm/GTMTool) blind test | Your CMS hero headline, as a **draft** | The before/after. It refuses to press anything called Publish |
 
 ```sh
-deskhand run lead-to-crm --company "Acme Analytics" --note "Met at SaaStr"
+deskhand run lead-to-crm --company "Acme Analytics" --note "Met at SaaStr" --ui
 deskhand run lead-to-crm --from-selection            # Mac: whatever you have highlighted
 deskhand run inbox-triage --target things --limit 20
 deskhand run onboarding-fill --intake ~/Desktop/northwind.txt --owner Neel
@@ -51,6 +57,10 @@ export ANTHROPIC_API_KEY=sk-ant-...
 npx deskhand doctor
 npx deskhand demo lead-to-crm
 ```
+
+The stand-ins look like the real thing on purpose, because they are what is on screen when you record a demo.
+
+<p align="center"><img src="docs/app-crm.png" width="49%"> <img src="docs/app-mail.png" width="49%"><br><img src="docs/app-payroll.png" width="49%"> <img src="docs/app-dashboard.png" width="49%"></p>
 
 `demo lineup-to-site` needs no key at all. The others use Claude for three things only: pulling a record out of page text, reading an ask out of an email, and finding a field when a label does not match. Everything else is deterministic, so the demo looks the same twice in a row.
 
@@ -87,6 +97,7 @@ runbook  ──►  snapshot()  ──►  [{ id, role, name, value, editable },
 - **Two backends, one snapshot shape.** `core/backends/browser.js` drives Chrome through Playwright and flattens the DOM into a list of named nodes. `core/backends/ax.js` does the same for native apps through `mac/axq`, a 200-line Swift command over the Accessibility API. Runbooks never touch either API directly; they look nodes up by role and name and hand an id back.
 - **The model is on a short leash.** It is called with a forced tool schema and never decides what to click next on its own. The runbooks are scripts; Claude fills in the parts that need reading.
 - **Nothing is written without the gate.** `core/gate.js` is one function and every write path goes through it. `--yes` exists for workflows you have watched enough times, and that choice is logged too.
+- **The panel is one HTML file** (`core/ui.html`) served by a 60-line server; the gate pushes an event, the page answers over a POST. No framework, no build.
 - **Every run is a JSONL log** under `~/.deskhand/runs/`. `deskhand log` prints the last one: what was on screen, what was extracted, which node was chosen, what you answered.
 
 ## Honest limits
@@ -99,12 +110,13 @@ runbook  ──►  snapshot()  ──►  [{ id, role, name, value, editable },
 
 ```
 bin/deskhand.js        CLI: list · run · demo · log · doctor · fixtures · chrome
-core/                  snapshot shape, gate, model wrapper, logging, two backends
+core/                  snapshot shape, gate, approval panel, model wrapper, logging, two backends
 runbooks/              the five workflows
 config/                example maps for the CRM, forms, portfolio, CMS, and ~/.deskhand/config.json
 mac/axq.swift          Accessibility helper (build with npm run build:mac)
 test/fixtures/         the stand-in apps (also what `deskhand demo` and `deskhand fixtures` serve)
-test/*.test.js         15 end-to-end tests that drive a real browser against the fixtures
+test/*.test.js         17 tests, most of them end to end through a real browser against the fixtures
+docs/shoot.js          regenerates the screenshots above from real runs
 ```
 
 ```sh

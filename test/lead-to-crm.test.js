@@ -42,6 +42,6 @@ test('lead-to-crm: existing record → update path with a diff', async () => {
     const rec = st.crm.find((r) => r.domain === 'oldco.com');
     assert.equal(rec.size, '250');
     assert.equal(rec.one_liner, 'Legacy ERP, now cloud');
-    assert.equal(st.crm.length, 1, 'no duplicate created');
+    assert.equal(st.crm.filter((r) => r.domain === 'oldco.com').length, 1, 'no duplicate created');
   } finally { await h.close(); }
 });

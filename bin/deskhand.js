@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import { spawn } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -32,7 +33,7 @@ async function load(name) {
 const usage = () => `deskhand — one workflow at a time, with a diff before every write.
 
   deskhand list                      the runbooks and their options
-  deskhand run <runbook> [--opt v]   run one (add --yes to skip the gates, --headless to hide the browser)
+  deskhand run <runbook> [--opt v]   run one (--ui opens the approval panel, --yes skips the gates, --headless hides the browser)
   deskhand demo <runbook>            run it against the built-in fixture apps so you can watch it work
   deskhand log                       what the last run saw and decided
   deskhand doctor                    check the key, the browser, and (on a Mac) the accessibility helper
@@ -91,11 +92,16 @@ async function main() {
       runOpts = { ...demoOptions(name, u), ...opts };
       console.error(`demo: fixture apps at ${u}`);
     }
-    const ctx = await createContext(name, { yes: !!opts.yes });
+    const ctx = await createContext(name, { yes: !!opts.yes, ui: !!opts.ui && { port: Number(opts['ui-port']) || undefined } });
+    if (ctx.ui) {
+      console.error(`panel: ${ctx.ui.url}`);
+      if (process.platform === 'darwin' && !opts['no-open']) spawn('open', [ctx.ui.url], { stdio: 'ignore', detached: true }).unref();
+    }
     try {
       const out = await run(ctx, runOpts);
       console.log(JSON.stringify(out, null, 2));
       console.error(`\nlog: ${ctx.log.file}`);
+      if (ctx.ui && !opts.yes) { console.error('panel stays up until you press Enter.'); await new Promise((r) => process.stdin.once('data', r)); }
     } finally { await ctx.close(); await fx?.close(); }
     return;
   }

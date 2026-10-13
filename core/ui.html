@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>deskhand</title>
+<style>
+  :root {
+    --bg: #f4f3ef; --panel: #ffffff; --ink: #1b1b1f; --mute: #6b6b74; --line: #e5e3dc;
+    --accent: #2f5bea; --accent-ink: #ffffff; --ok: #1f7a4d; --ok-bg: #e6f4ec; --no: #b3261e; --no-bg: #fbe9e7;
+    --add: #0f6b3d; --add-bg: #e8f6ee; --del: #a62e26; --del-bg: #fdecea; --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #141417; --panel: #1d1d22; --ink: #ededf0; --mute: #9a9aa5; --line: #2c2c33; --accent: #7a93ff; --accent-ink: #0b0b10;
+    --ok: #6fd39a; --ok-bg: #16311f; --no: #ff8a80; --no-bg: #3a1f1c; --add: #7fd6a4; --add-bg: #15301f; --del: #ff9a91; --del-bg: #3a1f1c; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; }
+  header { display: flex; align-items: center; gap: 14px; padding: 14px 24px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; }
+  header .logo { width: 28px; height: 28px; border-radius: 8px; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-weight: 700; font-size: 15px; }
+  header h1 { font-size: 15px; font-weight: 600; margin: 0; }
+  header .rb { font-family: var(--mono); font-size: 13px; color: var(--mute); }
+  .status { margin-left: auto; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; background: var(--line); color: var(--mute); }
+  .status.running { background: #fff3cd; color: #7a5a00; } .status.ok { background: var(--ok-bg); color: var(--ok); } .status.declined, .status.stopped { background: var(--no-bg); color: var(--no); }
+  .status.running::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 6px; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  main { display: grid; grid-template-columns: 300px 1fr; gap: 24px; padding: 24px; max-width: 1200px; margin: 0 auto; }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; padding: 16px; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+  .timeline { padding: 6px 0; align-self: start; position: sticky; top: 80px; max-height: calc(100vh - 110px); display: flex; flex-direction: column; }
+  .timeline #steps { overflow-y: auto; }
+  .timeline h2, .gate h2 { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); margin: 0; padding: 14px 18px 8px; }
+  .step { display: grid; grid-template-columns: 18px 1fr auto; gap: 10px; align-items: start; padding: 8px 18px; font-size: 14px; border-top: 1px solid var(--line); }
+  .step .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mute); margin-top: 7px; }
+  .step.is-gate .dot { background: var(--accent); } .step.done .dot { background: var(--ok); } .step.bad .dot { background: var(--no); }
+  .step .name { font-weight: 500; } .step .detail { color: var(--mute); font-size: 13px; font-family: var(--mono); overflow-wrap: anywhere; }
+  .step .t { color: var(--mute); font-size: 12px; font-family: var(--mono); }
+  .gate { padding: 0 0 18px; }
+  .gate .title { font-size: 20px; font-weight: 600; margin: 4px 18px 6px; letter-spacing: -.01em; }
+  .gate .lines { margin: 0 18px 12px; color: var(--mute); font-size: 14px; }
+  .gate .lines div { padding: 2px 0; }
+  table.diff { width: calc(100% - 36px); margin: 6px 18px; border-collapse: collapse; font-size: 14px; }
+  table.diff td { padding: 7px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+  table.diff td.k { width: 150px; color: var(--mute); font-family: var(--mono); font-size: 13px; }
+  table.diff td.v input, table.diff td.v textarea { width: 100%; font: inherit; color: inherit; background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 4px 6px; margin: -4px -6px; }
+  table.diff td.v input:hover, table.diff td.v textarea:hover { border-color: var(--line); background: var(--bg); }
+  table.diff td.v input:focus, table.diff td.v textarea:focus { border-color: var(--accent); outline: none; background: var(--panel); }
+  .was { display: block; font-size: 13px; color: var(--del); background: var(--del-bg); text-decoration: line-through; padding: 2px 6px; border-radius: 4px; margin-bottom: 4px; width: fit-content; }
+  .now { display: inline-block; background: var(--add-bg); color: var(--add); padding: 2px 6px; border-radius: 4px; }
+  .items { margin: 4px 18px 0; }
+  .item { display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: center; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; }
+  .item .box { width: 18px; height: 18px; border-radius: 5px; border: 2px solid var(--mute); }
+  .item .ttl { font-weight: 500; } .item .meta { color: var(--mute); font-size: 13px; }
+  .item .due { font-family: var(--mono); font-size: 12px; padding: 3px 8px; border-radius: 999px; background: var(--bg); color: var(--mute); border: 1px solid var(--line); }
+  .actions { display: flex; gap: 10px; margin: 16px 18px 0; align-items: center; }
+  button { font: inherit; font-weight: 600; border-radius: 10px; padding: 10px 18px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+  button.ok { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.no { color: var(--no); }
+  button:disabled { opacity: .5; cursor: default; }
+  .hint { color: var(--mute); font-size: 13px; margin-left: auto; }
+  .empty { padding: 40px 18px; color: var(--mute); text-align: center; }
+  .decided { margin: 12px 18px 0; padding: 10px 14px; border-radius: 10px; font-weight: 500; }
+  .decided.yes { background: var(--ok-bg); color: var(--ok); } .decided.no { background: var(--no-bg); color: var(--no); }
+  .past { opacity: .6; }
+  kbd { font-family: var(--mono); font-size: 12px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 5px; }
+</style>
+</head>
+<body>
+<header><div class="logo">d</div><h1>deskhand</h1><span class="rb" id="rb"></span><span class="status running" id="status">running</span></header>
+<main>
+  <section class="card timeline"><h2>Run</h2><div id="steps"></div></section>
+  <section id="gates"><div class="card gate"><div class="empty">Waiting for the first gate…</div></div></section>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const show = (v) => v == null || v === '' ? '' : Array.isArray(v) ? v.join(', ') : typeof v === 'object' ? JSON.stringify(v) : String(v);
+  const ms = (t) => (t / 1000).toFixed(1) + 's';
+  let state = {};
+  function render() {
+    $('rb').textContent = state.runbook || '';
+    const st = $('status'); st.textContent = state.status; st.className = 'status ' + state.status;
+  }
+  const describe = (name, d) => {
+    if (d.note) return d.note;
+    switch (name) {
+      case 'read-homepage': return d.h1 || d.title || d.url;
+      case 'search': return `${d.query} → ${d.site}`;
+      case 'fill': return `${d.label} ← ${d.key}`;
+      case 'gate': return d.auto ? 'auto-approved (--yes)' : `${d.decision === 'yes' ? 'approved' : 'declined'}${d.via ? ' in the ' + d.via : ''}`;
+      case 'saved': return d.verified ? 'verified on the page' : 'not verified, check the log';
+      case 'found-existing': return `${d.existing?.name || ''} already in the CRM`;
+      case 'drafted': return `${d.draft?.name || ''}${d.draft?.one_liner ? ' · ' + d.draft.one_liner : ''}`;
+      case 'inbox': return `${d.rows} rows`;
+      case 'picked': return `${d.open} of ${d.of} look like real asks`;
+      case 'read': return d.subject ? `${d.subject} · ${d.asks} ask${d.asks === 1 ? '' : 's'}` : d.company ? `${d.company}: ${d.value}` : '';
+      case 'task': return d.task;
+      case 'submitted': return `page ${d.page}${d.missing?.length ? ' · missing ' + d.missing.join(', ') : ''}`;
+      case 'tracker': return Object.values(d.row || {}).join(' · ');
+      case 'winner': return `${d.head} (${d.why})`;
+      case 'failed': return `${d.company || ''} ${d.error || ''}`;
+      case 'extracted': return d.empty?.length ? `missing: ${d.empty.join(', ')}` : 'all fields found';
+      default: return Object.entries(d).map(([k, v]) => `${k}: ${show(v)}`).join(' · ');
+    }
+  };
+  function addStep(ev) {
+    const d = ev.data || {};
+    const detail = String(describe(ev.name, d) || '').slice(0, 110);
+    const el = document.createElement('div');
+    el.className = 'step' + (ev.name === 'gate' ? ' is-gate' : '') + (['saved', 'task', 'submitted', 'tracker'].includes(ev.name) ? ' done' : '') + (['failed', 'field-missing', 'row-gone'].includes(ev.name) ? ' bad' : '');
+    el.innerHTML = `<span class="dot"></span><div><div class="name">${esc(ev.name.replace(/-/g, ' '))}</div><div class="detail">${esc(detail)}</div></div><span class="t">${ms(ev.t)}</span>`;
+    $('steps').appendChild(el); $('steps').scrollTop = $('steps').scrollHeight;
+  }
+  function addGate(g) {
+    const host = $('gates');
+    if (host.querySelector('.empty')) host.innerHTML = '';
+    for (const p of host.querySelectorAll('.gate')) p.classList.add('past');
+    const keys = [...new Set([...Object.keys(g.before || {}), ...Object.keys(g.after || {})])];
+    const rows = keys.map((k) => {
+      const a = g.before ? show(g.before[k]) : null, b = show(g.after?.[k]);
+      const changed = g.before && a !== b;
+      const long = b.length > 60;
+      const input = g.allowEdit === false ? `<span class="${changed || !g.before ? 'now' : ''}">${esc(b)}</span>`
+        : long ? `<textarea data-k="${esc(k)}" rows="2">${esc(b)}</textarea>` : `<input data-k="${esc(k)}" value="${esc(b)}">`;
+      return `<tr><td class="k">${esc(k)}</td><td class="v">${changed ? `<span class="was">${esc(a) || '(empty)'}</span>` : ''}${input}</td></tr>`;
+    }).join('');
+    const card = document.createElement('div');
+    card.className = 'card gate'; card.id = g.id;
+    card.innerHTML = `<h2>Gate</h2><div class="title">${esc(g.title)}</div>
+      <div class="lines">${(g.lines || []).map((l) => `<div>${esc(l)}</div>`).join('')}</div>
+      ${keys.length ? `<table class="diff">${rows}</table>` : ''}
+      ${g.items?.length ? `<div class="items">${g.items.map((it) => `<div class="item"><span class="box"></span><div><div class="ttl">${esc(it.title)}</div><div class="meta">${esc(it.meta || '')}</div></div>${it.due ? `<span class="due">due ${esc(it.due)}</span>` : '<span></span>'}</div>`).join('')}</div>` : ''}
+      <div class="actions"><button class="ok">Approve</button><button class="no">Decline</button><span class="hint">${keys.length && g.allowEdit !== false ? 'Click a value to edit it. ' : ''}Or answer in the terminal · <kbd>y</kbd> <kbd>n</kbd></span></div>`;
+    host.prepend(card); window.scrollTo({ top: 0 });
+    const answer = async (decision) => {
+      const record = g.after ? { ...g.after } : null;
+      if (record) for (const el of card.querySelectorAll('[data-k]')) record[el.dataset.k] = el.value;
+      for (const b of card.querySelectorAll('button')) b.disabled = true;
+      await fetch('/answer', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: g.id, decision, record }) });
+    };
+    card.querySelector('.ok').onclick = () => answer('yes');
+    card.querySelector('.no').onclick = () => answer('no');
+  }
+  function gateDone(ev) {
+    const card = $(ev.id); if (!card) return;
+    for (const b of card.querySelectorAll('button')) b.disabled = true;
+    for (const el of card.querySelectorAll('[data-k]')) el.disabled = true;
+    const d = document.createElement('div'); d.className = 'decided ' + ev.decision; d.textContent = ev.decision === 'yes' ? 'Approved. Writing it now.' : 'Declined. Nothing was written.';
+    card.querySelector('.actions').after(d);
+  }
+  function handle(ev) {
+    if (ev.type === 'hello') { state = ev.state; render(); ev.events.forEach(handle); return; }
+    if (ev.type === 'step') addStep(ev);
+    if (ev.type === 'gate') addGate(ev.gate);
+    if (ev.type === 'gate-done') gateDone(ev);
+    if (ev.type === 'finish') { state.status = ev.status; render(); addStep({ name: 'finish · ' + ev.status, t: ev.t, data: ev.data }); for (const d of document.querySelectorAll('.decided.yes')) d.textContent = ev.status === 'ok' ? 'Approved and written.' : `Approved. Run ended: ${ev.status}.`; }
+  }
+  new EventSource('/events').onmessage = (m) => handle(JSON.parse(m.data));
+</script>
+</body>
+</html>

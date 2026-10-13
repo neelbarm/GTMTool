@@ -74,9 +74,11 @@ export async function run(ctx, opts = {}) {
   if (!tasks.length) { ctx.log.finish('nothing'); return { status: 'nothing', tasks }; }
 
   // 3. Gate.
+  const where = target === 'markdown' ? path.basename(opts.out || ctx.settings.tasksFile || 'tasks.md') : target[0].toUpperCase() + target.slice(1);
   const { ok } = await ctx.gate({
-    title: `Create ${tasks.length} task${tasks.length === 1 ? '' : 's'} in ${target}`,
+    title: `Add ${tasks.length} task${tasks.length === 1 ? '' : 's'} to ${where}`,
     lines: tasks.map((t, i) => `${i + 1}. ${t.task}${t.due ? '  (due ' + t.due + ')' : ''}  — ${t.from}, "${t.subject}"`),
+    items: tasks.map((t) => ({ title: t.task, meta: `${t.from} · ${t.subject}`, due: t.due })),
     allowEdit: false,
   });
   if (!ok) { ctx.log.finish('declined'); return { status: 'declined', tasks }; }

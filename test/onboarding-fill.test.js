@@ -53,6 +53,6 @@ test('onboarding-fill: web-form tracker', async () => {
     const res = await run(h.ctx, { intake, forms, owner: 'Neel' });
     assert.equal(res.status, 'ok');
     const st = await h.state();
-    assert.deepEqual(st.tracker, [{ customer: 'Globex', owner: 'Neel', status: 'Submitted' }]);
+    assert.deepEqual(st.tracker.at(-1), { customer: 'Globex', owner: 'Neel', status: 'Submitted' });
   } finally { await h.close(); }
 });
