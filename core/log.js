@@ -22,6 +22,17 @@ export function createLog(runbook, { quiet = false } = {}) {
   };
 }
 
+export function recentRuns(n = 8) {
+  const dir = path.join(home(), 'runs');
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir).filter((f) => f.endsWith('.jsonl')).sort().reverse().slice(0, n).map((f) => {
+    const lines = fs.readFileSync(path.join(dir, f), 'utf8').trim().split('\n').map((l) => { try { return JSON.parse(l); } catch { return {}; } });
+    const fin = lines.find((l) => l.step === 'finish');
+    const m = f.match(/^(.*)-(\d{4}-\d{2}-\d{2}T[\d-]+Z)\.jsonl$/);
+    return { file: f, runbook: m ? m[1] : f, at: m ? m[2].replace(/-(\d{2})-(\d{2})-\d{3}Z$/, ':$1:$2').replace('T', ' ') : '', status: fin ? fin.status : 'running' };
+  });
+}
+
 export function lastRun() {
   const dir = path.join(home(), 'runs');
   if (!fs.existsSync(dir)) return null;

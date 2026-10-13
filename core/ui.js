@@ -8,12 +8,12 @@ import { fileURLToPath } from 'node:url';
 // The terminal keeps working too; whichever answers first wins.
 const PAGE = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'ui.html'), 'utf8');
 
-export function createUI({ port = Number(process.env.DESKHAND_UI_PORT) || 4747, runbook = '' } = {}) {
+export function createUI({ port = Number(process.env.DESKHAND_UI_PORT) || 4747, runbook = '', info = {} } = {}) {
   const clients = new Set();
   const events = [];
   const pending = new Map(); // gate id → resolve
   let seq = 0;
-  const state = { runbook, status: 'running', started: Date.now() };
+  const state = { runbook, status: 'running', started: Date.now(), info, calls: 0 };
 
   const emit = (type, data = {}) => {
     const ev = { id: ++seq, t: Date.now() - state.started, type, ...data };
@@ -49,7 +49,8 @@ export function createUI({ port = Number(process.env.DESKHAND_UI_PORT) || 4747, 
     state, events, emit,
     get url() { return `http://localhost:${server.address().port}`; },
     async listen() { await new Promise((r, j) => { server.once('error', j); server.listen(port, '127.0.0.1', r); }); return this.url; },
-    step(name, data) { emit('step', { name, data }); },
+    step(name, data) { emit('step', { name, data, calls: state.calls }); },
+    setCalls(n) { state.calls = n; },
     // Ask the page. Resolves with { decision: 'yes'|'no', record }.
     ask(gate) {
       const id = 'g' + (++seq);
