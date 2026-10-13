@@ -74,10 +74,10 @@ const p = g({ title: 'Update Oldco in Northstar CRM', lines: ['Source: https://o
 await wait(100);
 const ansi = sink.join('') + 'y\n  \x1b[32m✓ approved\x1b[0m\n\x1b[2m· gate\n· fill\n· fill\n· fill\n· saved — http://app.northstar.test/crm/1\x1b[0m\n';
 const html = ansi.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])).replace(/\x1b\[1m/g, '<b>').replace(/\x1b\[2m/g, '<span class="dim">').replace(/\x1b\[32m/g, '<span class="g">').replace(/\x1b\[31m/g, '<span class="r">').replace(/\x1b\[34m/g, '<span class="b">').replace(/\x1b\[33m/g, '<span class="y">').replace(/\x1b\[0m/g, '</span></b>'.repeat(1));
-fs.writeFileSync(path.join(tmp, 'term.html'), `<!doctype html><meta charset="utf-8"><style>body{margin:0;background:radial-gradient(700px 400px at 10% 0%,rgba(124,140,255,.25),transparent 60%),radial-gradient(600px 400px at 100% 10%,rgba(179,124,255,.18),transparent 55%),#0a0b0f;display:grid;place-items:start center;padding:28px 0;min-height:100vh;box-sizing:border-box}
-.win{width:860px;background:#0d0e13;border:1px solid rgba(255,255,255,.08);border-radius:14px;box-shadow:0 40px 100px rgba(0,0,0,.6);overflow:hidden}.bar{height:38px;background:#13151c;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:8px;padding:0 14px}.bar i{width:12px;height:12px;border-radius:50%;display:inline-block}
-pre{margin:0;padding:22px 26px;color:#d7dae0;font:14.5px/1.55 "SF Mono",Menlo,Consolas,monospace;white-space:pre-wrap}.dim{color:#7c8290}.g{color:#4ade80}.r{color:#fb7185}.b{color:#7c8cff}.y{color:#fbbf24}b{color:#fff}</style>
-<div class="win"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span style="color:#7c8290;font:12px ui-monospace,Menlo,monospace;margin-left:10px">deskhand run lead-to-crm --url oldco.com</span></div><pre>$ deskhand run lead-to-crm --url oldco.com --note "Met at SaaStr, wants a demo in Nov"
+fs.writeFileSync(path.join(tmp, 'term.html'), `<!doctype html><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"><style>body{margin:0;background:#f2eee4;display:grid;place-items:start center;padding:28px 0;min-height:100vh;box-sizing:border-box}
+.win{width:860px;background:#1b1a17;border:2px solid #16140f;box-shadow:6px 6px 0 #16140f;overflow:hidden}.bar{height:38px;background:#2a2824;border-bottom:1px solid #3a3731;display:flex;align-items:center;gap:8px;padding:0 14px}.bar i{width:12px;height:12px;border-radius:50%;display:inline-block}
+pre{margin:0;padding:22px 26px;color:#e8e3d6;font:14.5px/1.55 "IBM Plex Mono",Menlo,Consolas,monospace;white-space:pre-wrap}.dim{color:#7c8290}.g{color:#8fd19a}.r{color:#f08c7c}.b{color:#e8e3d6}.y{color:#e6c35c}b{color:#fff}.dim{color:#8a8477}</style>
+<div class="win"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span style="color:#8a8477;font:12px 'IBM Plex Mono',Menlo,monospace;margin-left:10px">deskhand run lead-to-crm --url oldco.com</span></div><pre>$ deskhand run lead-to-crm --url oldco.com --note "Met at SaaStr, wants a demo in Nov"
 <span class="dim">· read-homepage — ERP for manufacturers, now in the cloud
 · drafted
 · found-existing</span>${html}</pre></div>`);
@@ -86,15 +86,22 @@ await shot('file://' + path.join(tmp, 'term.html'), 'terminal.png', { w: 1000, h
 // 5. Cover / social preview, 1280x640.
 const b64 = fs.readFileSync(path.join(OUT, 'panel-gate.png')).toString('base64');
 fs.writeFileSync(path.join(tmp, 'cover.html'), `<!doctype html><meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
-<style>body{margin:0;width:1280px;height:640px;overflow:hidden;position:relative;color:#f2f3f7;font-family:Inter,sans-serif;background:radial-gradient(800px 500px at 0% 0%,rgba(124,140,255,.35),transparent 60%),radial-gradient(700px 500px at 100% 100%,rgba(179,124,255,.3),transparent 55%),#0a0b0f}
-body::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:40px 40px;mask-image:radial-gradient(ellipse at 20% 30%,#000 10%,transparent 70%)}
-.l{position:absolute;left:72px;top:84px;width:470px}.wm{display:flex;align-items:center;gap:12px;font:600 22px "Inter Tight";letter-spacing:-.02em}.wm i{width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,#7c8cff,#b37cff);box-shadow:0 0 20px rgba(124,140,255,.6)}
-h1{font:700 46px/1.04 "Inter Tight";letter-spacing:-.035em;margin:30px 0 16px}h1 span{background:linear-gradient(90deg,#7c8cff,#b37cff);-webkit-background-clip:text;color:transparent}
-p{font:400 17px/1.5 Inter;color:#b7bbc8;margin:0 0 24px;max-width:430px}.chips{display:flex;flex-wrap:wrap;gap:8px}.chips span{font:500 12.5px "JetBrains Mono";padding:7px 11px;border:1px solid rgba(255,255,255,.14);border-radius:999px;background:rgba(255,255,255,.04);color:#d4d7e0}
-.shot{position:absolute;left:600px;top:64px;width:880px;border-radius:14px;border:1px solid rgba(255,255,255,.12);box-shadow:0 50px 120px rgba(0,0,0,.7),0 0 0 1px rgba(0,0,0,.4);transform:perspective(1600px) rotateY(-14deg) rotateX(4deg);transform-origin:left center}
-</style><div class="l"><div class="wm"><i></i>deskhand</div><h1>An agent for your Mac that <span>shows the diff</span> before it touches anything.</h1><p>Five narrow workflows. One gate in front of every write. A log of what it saw and what you said.</p><div class="chips"><span>lead-to-crm</span><span>inbox-triage</span><span>onboarding-fill</span><span>portfolio-digest</span><span>lineup-to-site</span></div></div>
-<img class="shot" src="data:image/png;base64,${b64}">`);
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>body{margin:0;width:1280px;height:640px;overflow:hidden;position:relative;color:#16140f;font-family:"IBM Plex Sans",sans-serif;background:#f2eee4}
+.rule{position:absolute;left:64px;right:64px;top:84px;border-top:2px solid #16140f}
+.wm{position:absolute;left:64px;top:40px;font:italic 30px/1 "Instrument Serif"}.wm b{font-style:normal;font-weight:400}
+.no{position:absolute;right:64px;top:48px;font:500 12px "IBM Plex Mono";letter-spacing:.14em;text-transform:uppercase;color:#4a463d}
+h1{position:absolute;left:64px;top:130px;width:560px;font:400 66px/1 "Instrument Serif";letter-spacing:-.015em;margin:0}h1 i{color:#b5321f}
+p{position:absolute;left:64px;top:402px;width:470px;font:400 17px/1.55 "IBM Plex Sans";color:#4a463d;margin:0}
+.chips{position:absolute;left:64px;bottom:56px;display:flex;flex-wrap:wrap;gap:8px;width:560px}.chips span{font:500 12px "IBM Plex Mono";letter-spacing:.04em;padding:6px 10px;border:1px solid #16140f}
+.shot{position:absolute;left:690px;top:110px;width:780px;border:2px solid #16140f;box-shadow:10px 10px 0 #16140f}
+.stamp{position:absolute;left:600px;top:330px;font:400 54px/1 "Instrument Serif";text-transform:uppercase;letter-spacing:.12em;color:#b5321f;padding:12px 22px 10px;border:3px double #b5321f;transform:rotate(-10deg);mix-blend-mode:multiply;opacity:.9;z-index:2}
+.stamp small{display:block;font:500 11px "IBM Plex Mono";letter-spacing:.2em;text-align:center;margin-top:6px}
+</style><div class="wm"><b>desk</b>hand</div><div class="no">Form 01 · the gate</div><div class="rule"></div>
+<h1>An agent for your Mac that shows you the <i>diff</i> before it touches anything.</h1>
+<p>Five narrow workflows. One gate in front of every write. A log of what it saw and what you said.</p>
+<div class="chips"><span>lead-to-crm</span><span>inbox-triage</span><span>onboarding-fill</span><span>portfolio-digest</span><span>lineup-to-site</span></div>
+<img class="shot" src="data:image/png;base64,${b64}"><div class="stamp">Approved<small>2026-10-13 · 21:40</small></div>`);
 await shot('file://' + path.join(tmp, 'cover.html'), 'cover.png', { w: 1280, h: 640 });
 
 await cam.close(); await fx.close();
